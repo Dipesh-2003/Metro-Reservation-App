@@ -1,5 +1,7 @@
 package com.aurionpro.app.entity;
 
+import com.aurionpro.app.common.Role;
+
 import jakarta.persistence.*;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -20,6 +22,10 @@ public class User {
 
     @Column(nullable = false)
     private String name;
+    
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private Role role;
 
     private String password;
 

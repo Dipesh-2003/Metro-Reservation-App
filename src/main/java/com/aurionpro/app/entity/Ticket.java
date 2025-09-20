@@ -1,6 +1,8 @@
 package com.aurionpro.app.entity;
 
 import com.aurionpro.app.common.TicketStatus;
+import com.aurionpro.app.common.TicketType;
+
 import jakarta.persistence.*;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -31,6 +33,14 @@ public class Ticket {
     @ManyToOne
     @JoinColumn(name = "destination_station_id", nullable = false)
     private Station destinationStation;
+    
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "payment_id", nullable = false, unique = true)
+    private Payment payment;
+    
+    @Enumerated(EnumType.STRING)
+    @Column(name = "ticket_type", nullable = false)
+    private TicketType ticketType;
 
     @Column(nullable = false, precision = 10, scale = 2)
     private BigDecimal fare;
