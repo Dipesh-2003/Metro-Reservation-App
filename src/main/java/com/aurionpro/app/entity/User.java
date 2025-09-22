@@ -1,5 +1,9 @@
 package com.aurionpro.app.entity;
 
+import org.hibernate.annotations.CreationTimestamp;
+
+import com.aurionpro.app.common.Role;
+
 import jakarta.persistence.*;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -20,13 +24,18 @@ public class User {
 
     @Column(nullable = false)
     private String name;
+    
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private Role role;
 
     private String password;
 
     @Column(name = "profile_image_url")
     private String profileImageUrl;
 
-    @Column(nullable = false)
+    @CreationTimestamp
+    @Column(nullable = false, updatable = false)
     private java.time.Instant createdAt;
     
 }

@@ -18,9 +18,9 @@ public class Payment {
     @Column(name = "payment_id")
     private Integer paymentId;
 
-    @ManyToOne
-    @JoinColumn(name = "ticket_id", nullable = false)
-    private Ticket ticket;
+//    @ManyToOne
+//    @JoinColumn(name = "ticket_id", nullable = false)
+//    private Ticket ticket;
 
     @Column(nullable = false, precision = 10, scale = 2)
     private BigDecimal amount;
