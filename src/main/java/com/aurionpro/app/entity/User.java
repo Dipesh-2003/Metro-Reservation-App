@@ -1,5 +1,7 @@
 package com.aurionpro.app.entity;
 
+import org.hibernate.annotations.CreationTimestamp;
+
 import com.aurionpro.app.common.Role;
 
 import jakarta.persistence.*;
@@ -32,7 +34,8 @@ public class User {
     @Column(name = "profile_image_url")
     private String profileImageUrl;
 
-    @Column(nullable = false)
+    @CreationTimestamp
+    @Column(nullable = false, updatable = false)
     private java.time.Instant createdAt;
     
 }
