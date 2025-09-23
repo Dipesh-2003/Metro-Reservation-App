@@ -54,17 +54,17 @@ public class TicketServiceImpl implements TicketService {
     public Ticket bookTicket(BookingRequest bookingRequest, User user) {
         BigDecimal fare = calculateFare(bookingRequest.getOriginStationId(), bookingRequest.getDestinationStationId()).getFare();
 
-        // 1. Create and save the Payment entity
+        //create and save the Payment entity
         Payment payment = new Payment();
         payment.setAmount(fare);
         payment.setPaymentMethod(bookingRequest.getPaymentMethod());
-        payment.setStatus(PaymentStatus.PENDING); // Initial status
+        payment.setStatus(PaymentStatus.PENDING); //initial status
         payment.setCreatedAt(Instant.now());
 
-        // Handle payment logic
+        //handle payment logic
         if (bookingRequest.getPaymentMethod() == PaymentMethod.WALLET) {
             Wallet userWallet = walletService.getWalletByUser(user);
-            walletService.debit(userWallet, fare); // This will throw InsufficientFundsException if needed
+            walletService.debit(userWallet, fare); // this will throw InsufficientFundsException if needed
             payment.setStatus(PaymentStatus.COMPLETED);
         } else {
             // Logic for UPI payment would go here (e.g., call a payment gateway)
@@ -75,7 +75,7 @@ public class TicketServiceImpl implements TicketService {
         Payment savedPayment = paymentRepository.save(payment);
 
 
-        // 2. If payment is successful, create the ticket
+        // if payment is successful, create the ticket
         Station origin = stationRepository.findById(bookingRequest.getOriginStationId()).get();
         Station destination = stationRepository.findById(bookingRequest.getDestinationStationId()).get();
 
