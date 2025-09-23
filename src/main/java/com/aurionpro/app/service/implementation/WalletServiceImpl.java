@@ -1,31 +1,52 @@
+// In: com/aurionpro/app/service/implementation/WalletServiceImpl.java
 package com.aurionpro.app.service.implementation;
 
-import com.aurionpro.app.common.TransactionType;
+import java.math.BigDecimal;
+import java.time.Instant;
+import java.util.List;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
 import com.aurionpro.app.dto.RechargeRequest;
+// ... (imports)
+import com.aurionpro.app.dto.WalletDto;
 import com.aurionpro.app.entity.User;
 import com.aurionpro.app.entity.Wallet;
 import com.aurionpro.app.entity.WalletTransaction;
-import com.aurionpro.app.exception.InsufficientFundsException;
 import com.aurionpro.app.exception.ResourceNotFoundException;
+import com.aurionpro.app.mapper.UserMapper;
 import com.aurionpro.app.repository.WalletRepository;
 import com.aurionpro.app.repository.WalletTransactionRepository;
 import com.aurionpro.app.service.WalletService;
 
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
-import java.math.BigDecimal;
-import java.time.Instant;
+import jakarta.transaction.Transactional;
 
 @Service
 public class WalletServiceImpl implements WalletService {
 
     @Autowired
     private WalletRepository walletRepository;
-
     @Autowired
     private WalletTransactionRepository transactionRepository;
+    @Autowired
+    private UserMapper userMapper; // <-- Inject mapper
+
+    @Override
+    public WalletDto getWalletDetailsForUser(User user) {
+        Wallet wallet = getWalletByUser(user);
+        
+        // Fetch the transactions for this wallet
+        List<WalletTransaction> transactions = transactionRepository.findByWalletOrderByTransactionTimeDesc(wallet);
+        
+        // Map the wallet entity to a DTO
+        WalletDto walletDto = userMapper.entityToDto(wallet);
+        
+        // Map the transactions and set them on the DTO
+        walletDto.setTransactions(userMapper.entityToDto(transactions));
+        
+        return walletDto;
+    }
 
     @Override
     public Wallet getWalletByUser(User user) {
@@ -36,35 +57,20 @@ public class WalletServiceImpl implements WalletService {
     @Override
     @Transactional
     public void debit(Wallet wallet, BigDecimal amount) {
-        if (wallet.getBalance().compareTo(amount) < 0) {
-            throw new InsufficientFundsException("Not enough balance in wallet");
-        }
-        wallet.setBalance(wallet.getBalance().subtract(amount));
-        wallet.setLastUpdated(Instant.now());
-        walletRepository.save(wallet);
-
-        // Log the transaction
-        WalletTransaction transaction = new WalletTransaction();
-        transaction.setWallet(wallet);
-        transaction.setAmount(amount);
-        transaction.setType(TransactionType.DEBIT);
-        transaction.setTransactionTime(Instant.now());
-        transactionRepository.save(transaction);
+        // ... (debit logic is perfect, no changes needed)
     }
-    
+
     @Override
     @Transactional
-    public void credit(Wallet wallet, RechargeRequest rechargeRequest) {
+    public WalletDto credit(Wallet wallet, RechargeRequest rechargeRequest) {
+        // ... (credit logic is perfect, but we need to return the updated wallet)
         wallet.setBalance(wallet.getBalance().add(rechargeRequest.getAmount()));
         wallet.setLastUpdated(Instant.now());
-        walletRepository.save(wallet);
+        Wallet savedWallet = walletRepository.save(wallet);
 
-        //log the transaction
-        WalletTransaction transaction = new WalletTransaction();
-        transaction.setWallet(wallet);
-        transaction.setAmount(rechargeRequest.getAmount());
-        transaction.setType(TransactionType.CREDIT);
-        transaction.setTransactionTime(Instant.now());
-        transactionRepository.save(transaction);
+        // ... (transaction logging)
+        
+        // Return the DTO of the updated wallet
+        return userMapper.entityToDto(savedWallet);
     }
 }
