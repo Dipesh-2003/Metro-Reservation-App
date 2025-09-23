@@ -1,0 +1,32 @@
+package com.aurionpro.app.config;
+import com.aurionpro.app.common.Role;
+import com.aurionpro.app.entity.User;
+import com.aurionpro.app.repository.UserRepository;
+import lombok.RequiredArgsConstructor;
+import org.springframework.boot.CommandLineRunner;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Component;
+
+import java.util.Optional;
+
+@Component
+@RequiredArgsConstructor
+public class AdminInitializer implements CommandLineRunner {
+
+    private final UserRepository userRepository;
+    private final PasswordEncoder passwordEncoder;
+
+    @Override
+    public void run(String... args) throws Exception {
+        Optional<User> adminUser = userRepository.findByEmail("admin@metro.com");
+        if (adminUser.isEmpty()) {
+            User admin = new User();
+            admin.setName("Admin");
+            admin.setEmail("admin@metro.com");
+            admin.setPassword(passwordEncoder.encode("admin123")); // Use a strong password
+            admin.setRole(Role.ADMIN);
+            userRepository.save(admin);
+            System.out.println(">>>>>>>>>> Created default admin user <<<<<<<<<<");
+        }
+    }
+}
