@@ -13,16 +13,12 @@ import java.util.List;
 @Mapper(componentModel = "spring")
 public interface UserMapper {
 
-    // User -> UserDto
     UserDto entityToDto(User user);
     
-    // Wallet -> WalletDto
-    // MapStruct is smart enough to see the method below and use it for the list
+   
     WalletDto entityToDto(Wallet wallet);
 
-    // WalletTransaction -> WalletTransactionDto
     WalletTransactionDto entityToDto(WalletTransaction transaction);
     
-    // It also automatically handles lists
     List<WalletTransactionDto> entityToDto(List<WalletTransaction> transactions);
 }

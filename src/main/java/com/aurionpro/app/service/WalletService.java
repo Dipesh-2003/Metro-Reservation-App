@@ -9,7 +9,7 @@ import java.math.BigDecimal;
 public interface WalletService {
     // Returns a DTO with transaction history
     WalletDto getWalletDetailsForUser(User user);
-    Wallet getWalletByUser(User user); // Internal helper
-    void debit(Wallet wallet, BigDecimal amount); // Internal helper
+    Wallet getWalletByUser(User user); 
+    void debit(Wallet wallet, BigDecimal amount); 
     WalletDto credit(Wallet wallet, RechargeRequest rechargeRequest); // Returns DTO
 }

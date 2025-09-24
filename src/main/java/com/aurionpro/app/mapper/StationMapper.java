@@ -14,6 +14,5 @@ public interface StationMapper {
     StationDto entityToDto(Station station);
     List<StationDto> entityToDto(List<Station> stations);
     
-    // New method to convert a request DTO to an entity
     Station dtoToEntity(CreateStationRequest createRequest);
 }

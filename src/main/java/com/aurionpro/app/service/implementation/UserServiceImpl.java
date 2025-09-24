@@ -7,7 +7,7 @@ import com.aurionpro.app.dto.UserDto;
 import com.aurionpro.app.entity.User;
 import com.aurionpro.app.entity.Wallet;
 import com.aurionpro.app.exception.ResourceNotFoundException;
-import com.aurionpro.app.mapper.UserMapper; // <-- Import mapper
+import com.aurionpro.app.mapper.UserMapper;
 import com.aurionpro.app.repository.UserRepository;
 import com.aurionpro.app.repository.WalletRepository;
 import com.aurionpro.app.service.UserService;
@@ -29,20 +29,32 @@ public class UserServiceImpl implements UserService {
     @Autowired
     private PasswordEncoder passwordEncoder;
     @Autowired
-    private UserMapper userMapper; // <-- Inject mapper
+    private UserMapper userMapper;
 
     @Override
     @Transactional
     public UserDto registerUser(SignUpRequest signUpRequest) {
-        // ... (user creation and password hashing logic)
         User user = new User();
         user.setName(signUpRequest.getName());
         user.setEmail(signUpRequest.getEmail());
-        user.setPassword(passwordEncoder.encode(signUpRequest.getPassword()));
+        
+        // --- THIS IS THE KEY PART FOR DEBUGGING ---
+        String plainPassword = signUpRequest.getPassword();
+        String hashedPassword = passwordEncoder.encode(plainPassword);
+        
+        // This will print the plain and hashed passwords to your console.
+        // It's the best way to PROVE that your hashing is working correctly.
+        System.out.println(">>>>>>>>>> Registering User: " + signUpRequest.getEmail());
+        System.out.println(">>>>>>>>>> Plain Password: " + plainPassword);
+        System.out.println(">>>>>>>>>> Hashed Password: " + hashedPassword);
+        
+        user.setPassword(hashedPassword);
+        // ------------------------------------------
+        
         user.setRole(Role.USER);
         User savedUser = userRepository.save(user);
 
-        // ... (wallet creation logic)
+        // (wallet creation logic)
         Wallet wallet = new Wallet();
         wallet.setUser(savedUser);
         wallet.setBalance(BigDecimal.ZERO);
@@ -56,10 +68,9 @@ public class UserServiceImpl implements UserService {
     @Override
     public UserDto findByEmail(String email) {
         User user = findUserEntityByEmail(email);
-        // Use mapper for conversion
         return userMapper.entityToDto(user);
     }
-    
+
     @Override
     public User findUserEntityByEmail(String email) {
         return userRepository.findByEmail(email)
