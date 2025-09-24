@@ -5,15 +5,17 @@ import com.aurionpro.app.common.PaymentStatus;
 import com.aurionpro.app.common.TicketStatus;
 import com.aurionpro.app.dto.BookingRequest;
 import com.aurionpro.app.dto.FareResponse;
+import com.aurionpro.app.dto.RechargeRequest;
 import com.aurionpro.app.dto.TicketDto;
 import com.aurionpro.app.entity.*;
+import com.aurionpro.app.exception.InvalidOperationException;
 import com.aurionpro.app.exception.ResourceNotFoundException;
 import com.aurionpro.app.mapper.TicketMapper;
 import com.aurionpro.app.repository.*;
+import com.aurionpro.app.service.QRCodeService;
 import com.aurionpro.app.service.TicketService;
 import com.aurionpro.app.service.WalletService;
-
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -25,20 +27,16 @@ import java.util.List;
 import java.util.UUID;
 
 @Service
+@RequiredArgsConstructor
 public class TicketServiceImpl implements TicketService {
 
-    @Autowired
-    private TicketRepository ticketRepository;
-    @Autowired
-    private StationRepository stationRepository;
-    @Autowired
-    private FareRuleRepository fareRuleRepository;
-    @Autowired
-    private PaymentRepository paymentRepository;
-    @Autowired
-    private WalletService walletService;
-    @Autowired
-    private TicketMapper ticketMapper;
+    private final TicketRepository ticketRepository;
+    private final StationRepository stationRepository;
+    private final FareRuleRepository fareRuleRepository;
+    private final PaymentRepository paymentRepository;
+    private final WalletService walletService;
+    private final TicketMapper ticketMapper;
+    private final QRCodeService qrCodeService; // Injected QRCodeService
 
     @Override
     public FareResponse calculateFare(Integer originId, Integer destId) {
@@ -58,31 +56,29 @@ public class TicketServiceImpl implements TicketService {
     public TicketDto bookTicket(BookingRequest bookingRequest, User user) {
         BigDecimal fare = calculateFare(bookingRequest.getOriginStationId(), bookingRequest.getDestinationStationId()).getFare();
 
-        //create and save the Payment entity
+        // 1. Handle Payment
         Payment payment = new Payment();
         payment.setAmount(fare);
         payment.setPaymentMethod(bookingRequest.getPaymentMethod());
-        payment.setStatus(PaymentStatus.PENDING); //initial status
+        payment.setStatus(PaymentStatus.PENDING);
         payment.setCreatedAt(Instant.now());
 
-        //handle payment logic
         if (bookingRequest.getPaymentMethod() == PaymentMethod.WALLET) {
             Wallet userWallet = walletService.getWalletByUser(user);
-            walletService.debit(userWallet, fare); // this will throw InsufficientFundsException if needed
+            walletService.debit(userWallet, fare);
             payment.setStatus(PaymentStatus.COMPLETED);
         } else {
-            // Logic for UPI payment would go here (e.g., call a payment gateway)
-            // For now, we'll assume it's completed for simulation purposes.
-             payment.setStatus(PaymentStatus.COMPLETED);
+            payment.setStatus(PaymentStatus.COMPLETED);
         }
-
         Payment savedPayment = paymentRepository.save(payment);
 
+        // 2. Fetch Stations
+        Station origin = stationRepository.findById(bookingRequest.getOriginStationId())
+                .orElseThrow(() -> new ResourceNotFoundException("Origin station not found"));
+        Station destination = stationRepository.findById(bookingRequest.getDestinationStationId())
+                .orElseThrow(() -> new ResourceNotFoundException("Destination station not found"));
 
-        // if payment is successful, create the ticket
-        Station origin = stationRepository.findById(bookingRequest.getOriginStationId()).get();
-        Station destination = stationRepository.findById(bookingRequest.getDestinationStationId()).get();
-
+        // 3. Create and Save Ticket with QR Code
         Ticket ticket = new Ticket();
         ticket.setUser(user);
         ticket.setOriginStation(origin);
@@ -90,40 +86,70 @@ public class TicketServiceImpl implements TicketService {
         ticket.setFare(fare);
         ticket.setTicketType(bookingRequest.getTicketType());
         ticket.setPayment(savedPayment);
-        ticket.setTicketNumber(UUID.randomUUID().toString());
         ticket.setBookingTime(Instant.now());
         ticket.setIssueDate(LocalDate.now());
-        ticket.setExpiryTime(Instant.now().plus(24, ChronoUnit.HOURS)); // 24-hour validity
+        ticket.setExpiryTime(Instant.now().plus(24, ChronoUnit.HOURS));
         ticket.setStatus(TicketStatus.CONFIRMED);
-        ticket.setQrCodePayload("ticketId:" + ticket.getTicketNumber()); // Simplified QR payload
+
+        // --- QR Code Generation Logic ---
+        // a. Generate a unique ticket number first
+        String ticketNumber = UUID.randomUUID().toString();
+        ticket.setTicketNumber(ticketNumber);
+
+        // b. Create a structured JSON payload for the QR code
+        String qrPayload = String.format(
+            "{\"ticketNumber\":\"%s\",\"userId\":%d,\"origin\":\"%s\",\"destination\":\"%s\"}",
+            ticketNumber,
+            user.getUserId(),
+            origin.getName(),
+            destination.getName()
+        );
+
+        // c. Generate the QR code as a Base64 string and set it
+        String qrCodeBase64 = qrCodeService.generateQRCodeBase64(qrPayload);
+        ticket.setQrCodePayload(qrCodeBase64); // This now correctly sets the Base64 image data
         
         Ticket savedTicket = ticketRepository.save(ticket);
-        return ticketMapper.entityToDto(savedTicket); // <-- Use mapper
+        return ticketMapper.entityToDto(savedTicket);
+    }
 
+    @Override
+    public TicketDto getTicketByIdAndUser(Integer ticketId, User user) {
+        Ticket ticket = ticketRepository.findByTicketIdAndUser(ticketId, user)
+                .orElseThrow(() -> new ResourceNotFoundException("Ticket not found with ID: " + ticketId));
+        return ticketMapper.entityToDto(ticket);
+    }
+
+    @Override
+    @Transactional
+    public TicketDto cancelTicket(Integer ticketId, User user) {
+        Ticket ticket = ticketRepository.findByTicketIdAndUser(ticketId, user)
+                .orElseThrow(() -> new ResourceNotFoundException("Ticket not found with ID: " + ticketId));
+
+        if (ticket.getStatus() != TicketStatus.CONFIRMED) {
+            throw new InvalidOperationException("This ticket cannot be cancelled as it is already " + ticket.getStatus());
+        }
+        
+        if (ticket.getExpiryTime().isBefore(Instant.now())) {
+            ticket.setStatus(TicketStatus.EXPIRED);
+            ticketRepository.save(ticket);
+            throw new InvalidOperationException("This ticket cannot be cancelled as it has already expired.");
+        }
+
+        ticket.setStatus(TicketStatus.CANCELLED);
+        Ticket cancelledTicket = ticketRepository.save(ticket);
+
+        if (ticket.getPayment().getPaymentMethod() == PaymentMethod.WALLET) {
+            Wallet userWallet = walletService.getWalletByUser(user);
+            walletService.credit(userWallet, new RechargeRequest(ticket.getFare()));
+        }
+
+        return ticketMapper.entityToDto(cancelledTicket);
     }
 
     @Override
     public List<TicketDto> getTicketHistory(User user) {
         List<Ticket> tickets = ticketRepository.findByUserOrderByBookingTimeDesc(user);
         return ticketMapper.entityToDto(tickets);
-    }    
-
-    @Override
-    public TicketDto getTicketById(Integer id) {
-        Ticket ticket = ticketRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Ticket not found with ID: " + id));
-        return ticketMapper.entityToDto(ticket);
-    }
-    
-    @Override
-    @Transactional
-    public TicketDto cancelTicket(Integer id) {
-        Ticket ticket = ticketRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Ticket not found with ID: " + id));
-
-        // ... (your cancellation logic)
-        
-        Ticket cancelledTicket = ticketRepository.save(ticket);
-        return ticketMapper.entityToDto(cancelledTicket);
     }
 }

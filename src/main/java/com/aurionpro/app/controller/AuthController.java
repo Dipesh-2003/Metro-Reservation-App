@@ -2,6 +2,7 @@ package com.aurionpro.app.controller;
 
 import com.aurionpro.app.dto.*;
 import com.aurionpro.app.security.JwtService;
+import com.aurionpro.app.service.OtpService;
 import com.aurionpro.app.service.UserService;
 
 import io.swagger.v3.oas.annotations.Operation;
@@ -28,6 +29,7 @@ public class AuthController {
     private final AuthenticationManager authenticationManager;
     private final JwtService jwtService;
     private final UserDetailsService userDetailsService;
+    private final OtpService otpService;
 
     @PostMapping("/register")
     @Operation(summary = "Register a new user", description = "Creates a new user with the USER role.")
@@ -86,5 +88,19 @@ public class AuthController {
         // Step 4: Generate and return the JWT
         final String jwtToken = jwtService.generateToken(userDetails);
         return ResponseEntity.ok(new JwtResponse(jwtToken));
+    }
+    
+    @PostMapping("/send-otp")
+    @Operation(summary = "Send OTP to user's email", description = "Generates and sends a 6-digit OTP to the provided email for login or registration.")
+    public ResponseEntity<String> sendOtp(@RequestBody OtpRequestDto otpRequest) {
+        otpService.sendOtp(otpRequest.getEmail());
+        return ResponseEntity.ok("OTP sent successfully to " + otpRequest.getEmail());
+    }
+
+    @PostMapping("/verify-otp")
+    @Operation(summary = "Verify OTP and get JWT", description = "Verifies the OTP and, if valid, returns a JWT for an existing or newly created user.")
+    public ResponseEntity<JwtResponse> verifyOtp(@RequestBody VerifyOtpRequestDto verifyRequest) {
+        JwtResponse jwtResponse = otpService.verifyOtp(verifyRequest);
+        return ResponseEntity.ok(jwtResponse);
     }
 }
