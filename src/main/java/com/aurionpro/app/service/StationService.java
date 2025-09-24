@@ -1,11 +1,13 @@
 package com.aurionpro.app.service;
 
-import com.aurionpro.app.entity.Station;
 import java.util.List;
 
+import com.aurionpro.app.dto.CreateStationRequest;
+import com.aurionpro.app.dto.StationDto;
+
 public interface StationService {
-    Station addStation(Station station);
-    Station getStationById(Integer id);
-    List<Station> getAllStations();
+    StationDto addStation(CreateStationRequest createRequest);
+    StationDto getStationById(Integer id);
+    List<StationDto> getAllStations();
     void deleteStation(Integer id);
 }

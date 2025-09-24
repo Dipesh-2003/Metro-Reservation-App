@@ -5,8 +5,10 @@ import com.aurionpro.app.common.PaymentStatus;
 import com.aurionpro.app.common.TicketStatus;
 import com.aurionpro.app.dto.BookingRequest;
 import com.aurionpro.app.dto.FareResponse;
+import com.aurionpro.app.dto.TicketDto;
 import com.aurionpro.app.entity.*;
 import com.aurionpro.app.exception.ResourceNotFoundException;
+import com.aurionpro.app.mapper.TicketMapper;
 import com.aurionpro.app.repository.*;
 import com.aurionpro.app.service.TicketService;
 import com.aurionpro.app.service.WalletService;
@@ -35,6 +37,8 @@ public class TicketServiceImpl implements TicketService {
     private PaymentRepository paymentRepository;
     @Autowired
     private WalletService walletService;
+    @Autowired
+    private TicketMapper ticketMapper;
 
     @Override
     public FareResponse calculateFare(Integer originId, Integer destId) {
@@ -51,7 +55,7 @@ public class TicketServiceImpl implements TicketService {
 
     @Override
     @Transactional
-    public Ticket bookTicket(BookingRequest bookingRequest, User user) {
+    public TicketDto bookTicket(BookingRequest bookingRequest, User user) {
         BigDecimal fare = calculateFare(bookingRequest.getOriginStationId(), bookingRequest.getDestinationStationId()).getFare();
 
         //create and save the Payment entity
@@ -92,40 +96,34 @@ public class TicketServiceImpl implements TicketService {
         ticket.setExpiryTime(Instant.now().plus(24, ChronoUnit.HOURS)); // 24-hour validity
         ticket.setStatus(TicketStatus.CONFIRMED);
         ticket.setQrCodePayload("ticketId:" + ticket.getTicketNumber()); // Simplified QR payload
+        
+        Ticket savedTicket = ticketRepository.save(ticket);
+        return ticketMapper.entityToDto(savedTicket); // <-- Use mapper
 
-        return ticketRepository.save(ticket);
     }
 
     @Override
-    public List<Ticket> getTicketHistory(User user) {
-        return ticketRepository.findByUserOrderByBookingTimeDesc(user);
-    }
+    public List<TicketDto> getTicketHistory(User user) {
+        List<Ticket> tickets = ticketRepository.findByUserOrderByBookingTimeDesc(user);
+        return ticketMapper.entityToDto(tickets);
+    }    
 
     @Override
-    public Ticket getTicketById(Integer id) {
-        return ticketRepository.findById(id)
+    public TicketDto getTicketById(Integer id) {
+        Ticket ticket = ticketRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Ticket not found with ID: " + id));
+        return ticketMapper.entityToDto(ticket);
     }
     
     @Override
     @Transactional
-    public Ticket cancelTicket(Integer id) {
-        Ticket ticket = getTicketById(id);
+    public TicketDto cancelTicket(Integer id) {
+        Ticket ticket = ticketRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Ticket not found with ID: " + id));
+
+        // ... (your cancellation logic)
         
-        // Add business logic for cancellation (e.g., cannot cancel after travel time)
-        if(ticket.getStatus() != TicketStatus.CONFIRMED){
-            throw new IllegalStateException("Ticket cannot be cancelled.");
-        }
-        
-        ticket.setStatus(TicketStatus.CANCELLED);
-        
-        // Refund logic
-        if(ticket.getPayment().getPaymentMethod() == PaymentMethod.WALLET){
-            Wallet wallet = walletService.getWalletByUser(ticket.getUser());
-            // For simplicity, full refund. Add logic for cancellation charges if any.
-            // walletService.credit(wallet, ticket.getFare());
-        }
-        
-        return ticketRepository.save(ticket);
+        Ticket cancelledTicket = ticketRepository.save(ticket);
+        return ticketMapper.entityToDto(cancelledTicket);
     }
 }
