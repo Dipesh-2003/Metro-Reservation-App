@@ -4,6 +4,7 @@ import com.aurionpro.app.security.JwtAuthFilter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod; // Make sure this is imported
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
@@ -31,18 +32,18 @@ public class SecurityConfig {
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
                 .csrf(csrf -> csrf.disable())
-                .authorizeHttpRequests(req ->
-                        req.requestMatchers(
-                                "/api/v1/auth/**",      // Your public authentication endpoints
-                                
-                                // -- SWAGGER UI PERMISSIONS --
-                                "/v3/api-docs/**",      // The OpenAPI definition
-                                "/swagger-ui/**",       // The Swagger UI resources (CSS, JS, etc.)
-                                "/swagger-ui.html"      // The main Swagger UI page
-                                // ----------------------------
-                           ).permitAll()
-                           .anyRequest()
-                           .authenticated()
+                .authorizeHttpRequests(req -> req
+                        // Rule 1: Permit all requests to these general paths
+                        .requestMatchers(
+                                "/api/v1/auth/**",
+                                "/v3/api-docs/**",
+                                "/swagger-ui/**",
+                                "/swagger-ui.html"
+                        ).permitAll()
+                        // Rule 2: Specifically permit GET requests to the fare endpoint
+                        .requestMatchers(HttpMethod.GET, "/api/v1/tickets/fare").permitAll()
+                        // Rule 3: Any other request must be authenticated
+                        .anyRequest().authenticated()
                 )
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authenticationProvider(authenticationProvider())

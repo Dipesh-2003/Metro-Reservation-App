@@ -1,46 +1,64 @@
 package com.aurionpro.app.service.implementation;
 
+import com.aurionpro.app.dto.CreateFareRuleRequest;
 import com.aurionpro.app.dto.CreateStationRequest;
+import com.aurionpro.app.dto.FareRuleDto;
 import com.aurionpro.app.dto.StationDto;
+import com.aurionpro.app.entity.FareRule;
 import com.aurionpro.app.entity.Station;
 import com.aurionpro.app.exception.ResourceNotFoundException;
-import com.aurionpro.app.mapper.StationMapper; // <-- Import mapper
+import com.aurionpro.app.mapper.FareRuleMapper;
+import com.aurionpro.app.mapper.StationMapper;
+import com.aurionpro.app.repository.FareRuleRepository;
 import com.aurionpro.app.repository.StationRepository;
 import com.aurionpro.app.service.StationService;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
+@RequiredArgsConstructor // Using Lombok for cleaner constructor injection
 public class StationServiceImpl implements StationService {
 
-    @Autowired
-    private StationRepository stationRepository;
-
-    @Autowired
-    private StationMapper stationMapper; // <-- Inject mapper
+    private final StationRepository stationRepository;
+    private final FareRuleRepository fareRuleRepository;
+    private final StationMapper stationMapper;
+    private final FareRuleMapper fareRuleMapper; // Inject the new mapper
 
     @Override
     public StationDto addStation(CreateStationRequest createRequest) {
-        // Convert DTO to entity using the mapper
         Station newStation = stationMapper.dtoToEntity(createRequest);
         Station savedStation = stationRepository.save(newStation);
-        // Convert saved entity back to DTO for the response
         return stationMapper.entityToDto(savedStation);
+    }
+    
+    @Override
+    public List<StationDto> addStations(List<CreateStationRequest> createRequests) {
+        // 1. Map the list of DTOs to a list of entities
+        List<Station> stationsToSave = createRequests.stream()
+                .map(stationMapper::dtoToEntity)
+                .collect(Collectors.toList());
+
+        // 2. Save all entities in a single transaction (more efficient)
+        List<Station> savedStations = stationRepository.saveAll(stationsToSave);
+
+        // 3. Map the list of saved entities back to a list of DTOs for the response
+        return savedStations.stream()
+                .map(stationMapper::entityToDto)
+                .collect(Collectors.toList());
     }
 
     @Override
     public StationDto getStationById(Integer id) {
         Station station = stationRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Station not found with ID: " + id));
-        // Use mapper for conversion
         return stationMapper.entityToDto(station);
     }
 
     @Override
     public List<StationDto> getAllStations() {
         List<Station> stations = stationRepository.findAll();
-        // Use mapper for list conversion
         return stationMapper.entityToDto(stations);
     }
 
@@ -50,5 +68,26 @@ public class StationServiceImpl implements StationService {
             throw new ResourceNotFoundException("Station not found with ID: " + id);
         }
         stationRepository.deleteById(id);
+    }
+
+    @Override
+    public FareRuleDto addFareRule(CreateFareRuleRequest fareRuleRequest) {
+        // Step 1: Find the origin and destination stations from the database
+        Station origin = stationRepository.findById(fareRuleRequest.getOriginStationId())
+                .orElseThrow(() -> new ResourceNotFoundException("Origin station with ID " + fareRuleRequest.getOriginStationId() + " not found"));
+        Station destination = stationRepository.findById(fareRuleRequest.getDestinationStationId())
+                .orElseThrow(() -> new ResourceNotFoundException("Destination station with ID " + fareRuleRequest.getDestinationStationId() + " not found"));
+
+        // Step 2: Create a new FareRule entity
+        FareRule fareRule = new FareRule();
+        fareRule.setOriginStation(origin);
+        fareRule.setDestinationStation(destination);
+        fareRule.setFare(fareRuleRequest.getFare());
+
+        // Step 3: Save the new fare rule to the database
+        FareRule savedFareRule = fareRuleRepository.save(fareRule);
+        
+        // Step 4: Map the saved entity to a DTO and return it
+        return fareRuleMapper.entityToDto(savedFareRule);
     }
 }

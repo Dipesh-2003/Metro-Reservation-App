@@ -10,6 +10,8 @@ public interface TicketService {
     FareResponse calculateFare(Integer originId, Integer destId);
     TicketDto bookTicket(BookingRequest bookingRequest, User user);
     List<TicketDto> getTicketHistory(User user);
-    TicketDto getTicketById(Integer id);
-    TicketDto cancelTicket(Integer id);
+    
+    // --- NEW METHODS ---
+    TicketDto getTicketByIdAndUser(Integer ticketId, User user);
+    TicketDto cancelTicket(Integer ticketId, User user);
 }
