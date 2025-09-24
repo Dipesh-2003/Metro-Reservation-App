@@ -36,7 +36,6 @@ public class TicketController {
 
     @PostMapping("/book")
     public ResponseEntity<TicketDto> bookTicket(@RequestBody BookingRequest bookingRequest, Principal principal) {
-        // Get the full User entity from the authenticated principal's email
         User currentUser = userService.findUserEntityByEmail(principal.getName());
         return ResponseEntity.ok(ticketService.bookTicket(bookingRequest, currentUser));
     }
@@ -47,5 +46,5 @@ public class TicketController {
         return ResponseEntity.ok(ticketService.getTicketHistory(currentUser));
     }
 
-    // Add other endpoints for getById and cancel
+    
 }
