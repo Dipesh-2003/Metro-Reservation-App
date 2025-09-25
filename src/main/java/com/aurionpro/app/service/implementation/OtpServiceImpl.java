@@ -7,6 +7,7 @@ import com.aurionpro.app.entity.OtpVerification;
 import com.aurionpro.app.entity.User;
 import com.aurionpro.app.entity.Wallet;
 import com.aurionpro.app.exception.InvalidOperationException;
+import com.aurionpro.app.exception.ResourceNotFoundException;
 import com.aurionpro.app.repository.OtpVerificationRepository;
 import com.aurionpro.app.repository.UserRepository;
 import com.aurionpro.app.repository.WalletRepository;
@@ -64,11 +65,11 @@ public class OtpServiceImpl implements OtpService {
     @Override
     @Transactional
     public JwtResponse verifyOtp(VerifyOtpRequestDto verifyRequest) {
-        // Find the OTP by email and code
+        // Find the OTP record
         OtpVerification otp = otpRepository.findByEmailAndOtpCode(verifyRequest.getEmail(), verifyRequest.getOtpCode())
                 .orElseThrow(() -> new InvalidOperationException("Invalid OTP code provided."));
 
-        // Check if the OTP is already verified or expired
+        // Validate the OTP
         if (otp.getIsVerified()) {
             throw new InvalidOperationException("This OTP has already been used.");
         }
@@ -76,25 +77,32 @@ public class OtpServiceImpl implements OtpService {
             throw new InvalidOperationException("OTP has expired. Please request a new one.");
         }
 
-        // Mark the OTP as verified
+        // Find the corresponding user, who must exist and be disabled
+        User user = userRepository.findByEmail(verifyRequest.getEmail())
+                .orElseThrow(() -> new ResourceNotFoundException("User not found for this OTP verification request."));
+
+        if (user.isEnabled()) {
+            throw new InvalidOperationException("This user account is already verified.");
+        }
+
+        // Mark OTP as verified
         otp.setIsVerified(true);
         otpRepository.save(otp);
 
-        // Find or create the user
-        User user = userRepository.findByEmail(verifyRequest.getEmail())
-                .orElseGet(() -> createNewUser(verifyRequest.getEmail()));
-
-        // Generate JWT token
-        final UserDetails userDetails = user;
-        final String jwtToken = jwtService.generateToken(userDetails);
-
-        return new JwtResponse(jwtToken);
+        // Enable the user
+        user.setEnabled(true);
+        userRepository.save(user);
+        
+        // IMPORTANT: We no longer return a JWT here. 
+        // We will modify the controller to return a simple message.
+        // For now, returning null and we will fix the controller next.
+        return null; 
     }
 
     private User createNewUser(String email) {
         User newUser = new User();
         newUser.setEmail(email);
-        newUser.setName("User"); // A default name
+        newUser.setName("User"); //default name
         newUser.setRole(Role.USER);
         // This user has no password, as they log in via OTP
         User savedUser = userRepository.save(newUser);

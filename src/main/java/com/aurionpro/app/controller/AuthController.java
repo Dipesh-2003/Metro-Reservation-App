@@ -32,36 +32,12 @@ public class AuthController {
     private final OtpService otpService;
 
     @PostMapping("/register")
-    @Operation(summary = "Register a new user", description = "Creates a new user with the USER role.")
-    public ResponseEntity<UserDto> registerUser(@RequestBody SignUpRequest signUpRequest) {
-        UserDto registeredUser = userService.registerUser(signUpRequest);
-        return new ResponseEntity<>(registeredUser, HttpStatus.CREATED);
+    @Operation(summary = "1. Register a new user and send verification OTP", description = "Creates a new, disabled user and sends an OTP to their email for account verification.")
+    public ResponseEntity<String> registerUser(@RequestBody SignUpRequest signUpRequest) {
+        userService.registerUser(signUpRequest);
+        return ResponseEntity.ok("Registration successful. Please check your email for the verification OTP.");
     }
 
-    @PostMapping("/user/login")
-    @Operation(summary = "Login for regular users", description = "Authenticates a user and returns a JWT if they have the USER role.")
-    public ResponseEntity<?> loginUser(@RequestBody LoginRequest loginRequest) {
-        authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(
-                        loginRequest.getEmail(),
-                        loginRequest.getPassword()
-                )
-        );
-
-        final UserDetails userDetails = userDetailsService.loadUserByUsername(loginRequest.getEmail());
-
-        boolean isUser = userDetails.getAuthorities().stream()
-                .map(GrantedAuthority::getAuthority)
-                .anyMatch("ROLE_USER"::equals);
-
-        if (!isUser) {
-            // If not a user, deny access
-            return new ResponseEntity<>("Access Denied: This login is for users only.", HttpStatus.FORBIDDEN);
-        }
-
-        final String jwtToken = jwtService.generateToken(userDetails);
-        return ResponseEntity.ok(new JwtResponse(jwtToken));
-    }
 
     @PostMapping("/admin/login")
     @Operation(summary = "Login for administrators", description = "Authenticates a user and returns a JWT if they have the ADMIN role.")
@@ -90,17 +66,42 @@ public class AuthController {
         return ResponseEntity.ok(new JwtResponse(jwtToken));
     }
     
-    @PostMapping("/send-otp")
-    @Operation(summary = "Send OTP to user's email", description = "Generates and sends a 6-digit OTP to the provided email for login or registration.")
-    public ResponseEntity<String> sendOtp(@RequestBody OtpRequestDto otpRequest) {
-        otpService.sendOtp(otpRequest.getEmail());
-        return ResponseEntity.ok("OTP sent successfully to " + otpRequest.getEmail());
-    }
+//    @PostMapping("/send-otp")
+//    @Operation(summary = "Send OTP to user's email", description = "Generates and sends a 6-digit OTP to the provided email for login or registration.")
+//    public ResponseEntity<String> sendOtp(@RequestBody OtpRequestDto otpRequest) {
+//        otpService.sendOtp(otpRequest.getEmail());
+//        return ResponseEntity.ok("OTP sent successfully to " + otpRequest.getEmail());
+//    }
 
     @PostMapping("/verify-otp")
-    @Operation(summary = "Verify OTP and get JWT", description = "Verifies the OTP and, if valid, returns a JWT for an existing or newly created user.")
-    public ResponseEntity<JwtResponse> verifyOtp(@RequestBody VerifyOtpRequestDto verifyRequest) {
-        JwtResponse jwtResponse = otpService.verifyOtp(verifyRequest);
-        return ResponseEntity.ok(jwtResponse);
+    @Operation(summary = "2. Verify registration OTP", description = "Verifies the OTP sent during registration to activate the user's account.")
+    public ResponseEntity<String> verifyOtp(@RequestBody VerifyOtpRequestDto verifyRequest) {
+        otpService.verifyOtp(verifyRequest);
+        return ResponseEntity.ok("Account verified successfully. You may now log in.");
+    }
+
+    @PostMapping("/user/login")
+    @Operation(summary = "Login for regular users", description = "Authenticates a user and returns a JWT if they have the USER role.")
+    public ResponseEntity<?> loginUser(@RequestBody LoginRequest loginRequest) {
+    	authenticationManager.authenticate(
+    			new UsernamePasswordAuthenticationToken(
+    					loginRequest.getEmail(),
+    					loginRequest.getPassword()
+    					)
+    			);
+    	
+    	final UserDetails userDetails = userDetailsService.loadUserByUsername(loginRequest.getEmail());
+    	
+    	boolean isUser = userDetails.getAuthorities().stream()
+    			.map(GrantedAuthority::getAuthority)
+    			.anyMatch("ROLE_USER"::equals);
+    	
+    	if (!isUser) {
+    		// If not a user, deny access
+    		return new ResponseEntity<>("Access Denied: This login is for users only.", HttpStatus.FORBIDDEN);
+    	}
+    	
+    	final String jwtToken = jwtService.generateToken(userDetails);
+    	return ResponseEntity.ok(new JwtResponse(jwtToken));
     }
 }
