@@ -80,4 +80,13 @@ public class UserServiceImpl implements UserService {
         return userRepository.findByEmail(email)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found with email: " + email));
     }
+
+    @Override
+    @Transactional
+    public UserDto updateUserProfileImage(String email, String imageUrl) {
+        User user = findUserEntityByEmail(email);
+        user.setProfileImageUrl(imageUrl);
+        User updatedUser = userRepository.save(user);
+        return userMapper.entityToDto(updatedUser);
+    }
 }

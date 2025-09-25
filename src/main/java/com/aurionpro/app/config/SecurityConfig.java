@@ -1,3 +1,5 @@
+// In: src/main/java/com/aurionpro/app/config/SecurityConfig.java
+
 package com.aurionpro.app.config;
 
 import com.aurionpro.app.security.JwtAuthFilter;

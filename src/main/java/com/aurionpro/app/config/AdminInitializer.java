@@ -25,6 +25,7 @@ public class AdminInitializer implements CommandLineRunner {
             admin.setEmail("admin@metro.com");
             admin.setPassword(passwordEncoder.encode("admin123"));
             admin.setRole(Role.ADMIN);
+            admin.setEnabled(true); 
             userRepository.save(admin);
             System.out.println(">>>>>>>>>> Created default admin user <<<<<<<<<<");
         }
