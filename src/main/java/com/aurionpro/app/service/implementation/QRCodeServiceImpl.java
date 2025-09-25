@@ -31,7 +31,6 @@ public class QRCodeServiceImpl implements QRCodeService {
             return Base64.getEncoder().encodeToString(pngData);
             
         } catch (WriterException | IOException e) {
-            // In a real app, you'd have more robust error handling or a custom exception
             throw new RuntimeException("Could not generate QR Code", e);
         }
     }

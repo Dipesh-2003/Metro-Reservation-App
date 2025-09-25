@@ -11,7 +11,6 @@ public interface TicketService {
     TicketDto bookTicket(BookingRequest bookingRequest, User user);
     List<TicketDto> getTicketHistory(User user);
     
-    // --- NEW METHODS ---
     TicketDto getTicketByIdAndUser(Integer ticketId, User user);
     TicketDto cancelTicket(Integer ticketId, User user);
 }

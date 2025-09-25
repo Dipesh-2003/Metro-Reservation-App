@@ -36,6 +36,9 @@ public class User implements UserDetails {
     private Role role;
 
     private String password;
+    
+    @Column(nullable = false)
+    private boolean enabled = false;
 
     @Column(name = "profile_image_url")
     private String profileImageUrl;
@@ -73,6 +76,6 @@ public class User implements UserDetails {
 
     @Override
     public boolean isEnabled() {
-        return true; 
+        return enabled; 
     }
 }

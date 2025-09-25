@@ -18,13 +18,13 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 @Service
-@RequiredArgsConstructor // Using Lombok for cleaner constructor injection
+@RequiredArgsConstructor
 public class StationServiceImpl implements StationService {
 
     private final StationRepository stationRepository;
     private final FareRuleRepository fareRuleRepository;
     private final StationMapper stationMapper;
-    private final FareRuleMapper fareRuleMapper; // Inject the new mapper
+    private final FareRuleMapper fareRuleMapper; 
 
     @Override
     public StationDto addStation(CreateStationRequest createRequest) {
@@ -89,5 +89,22 @@ public class StationServiceImpl implements StationService {
         
         // Step 4: Map the saved entity to a DTO and return it
         return fareRuleMapper.entityToDto(savedFareRule);
+    }
+    
+    @Override
+    public StationDto updateStation(Integer stationId, CreateStationRequest updateRequest) {
+        //checks existing station or throw an exception
+        Station stationToUpdate = stationRepository.findById(stationId)
+                .orElseThrow(() -> new ResourceNotFoundException("Station not found with ID: " + stationId));
+
+        //update the stations properties
+        stationToUpdate.setName(updateRequest.getName());
+        stationToUpdate.setCode(updateRequest.getCode());
+
+        //save the updated station to the database
+        Station updatedStation = stationRepository.save(stationToUpdate);
+
+        //map the updated entity back to a DTO and return it
+        return stationMapper.entityToDto(updatedStation);
     }
 }

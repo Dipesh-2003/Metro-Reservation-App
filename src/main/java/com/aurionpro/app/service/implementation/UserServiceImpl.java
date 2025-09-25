@@ -1,4 +1,3 @@
-// In: com/aurionpro/app/service/implementation/UserServiceImpl.java
 package com.aurionpro.app.service.implementation;
 
 import com.aurionpro.app.common.Role;
@@ -6,10 +5,12 @@ import com.aurionpro.app.dto.SignUpRequest;
 import com.aurionpro.app.dto.UserDto;
 import com.aurionpro.app.entity.User;
 import com.aurionpro.app.entity.Wallet;
+import com.aurionpro.app.exception.InvalidOperationException;
 import com.aurionpro.app.exception.ResourceNotFoundException;
 import com.aurionpro.app.mapper.UserMapper;
 import com.aurionpro.app.repository.UserRepository;
 import com.aurionpro.app.repository.WalletRepository;
+import com.aurionpro.app.service.OtpService;
 import com.aurionpro.app.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -30,40 +31,43 @@ public class UserServiceImpl implements UserService {
     private PasswordEncoder passwordEncoder;
     @Autowired
     private UserMapper userMapper;
+    @Autowired
+    private OtpService otpService;
 
     @Override
     @Transactional
     public UserDto registerUser(SignUpRequest signUpRequest) {
-        User user = new User();
-        user.setName(signUpRequest.getName());
-        user.setEmail(signUpRequest.getEmail());
-        
-        // --- THIS IS THE KEY PART FOR DEBUGGING ---
-        String plainPassword = signUpRequest.getPassword();
-        String hashedPassword = passwordEncoder.encode(plainPassword);
-        
-        // This will print the plain and hashed passwords to your console.
-        // It's the best way to PROVE that your hashing is working correctly.
-        System.out.println(">>>>>>>>>> Registering User: " + signUpRequest.getEmail());
-        System.out.println(">>>>>>>>>> Plain Password: " + plainPassword);
-        System.out.println(">>>>>>>>>> Hashed Password: " + hashedPassword);
-        
-        user.setPassword(hashedPassword);
-        // ------------------------------------------
-        
-        user.setRole(Role.USER);
-        User savedUser = userRepository.save(user);
+    	userRepository.findByEmail(signUpRequest.getEmail())
+        .ifPresent(existingUser -> {
+            if (existingUser.isEnabled()) {
+                throw new InvalidOperationException("User with this email already exists.");
+            } else {
+                // If the user exists but is not enabled, delete them to allow a fresh registration attempt
+                userRepository.delete(existingUser);
+            }
+        });
 
-        // (wallet creation logic)
-        Wallet wallet = new Wallet();
-        wallet.setUser(savedUser);
-        wallet.setBalance(BigDecimal.ZERO);
-        wallet.setLastUpdated(Instant.now());
-        walletRepository.save(wallet);
+    User user = new User();
+    user.setName(signUpRequest.getName());
+    user.setEmail(signUpRequest.getEmail());
+    user.setPassword(passwordEncoder.encode(signUpRequest.getPassword()));
+    user.setRole(Role.USER);
+    user.setEnabled(false); // <-- Set user as disabled by default
+    
+    User savedUser = userRepository.save(user);
 
-        // Use mapper for the final response
-        return userMapper.entityToDto(savedUser);
-    }
+    // Wallet creation logic remains the same
+    Wallet wallet = new Wallet();
+    wallet.setUser(savedUser);
+    wallet.setBalance(BigDecimal.ZERO);
+    wallet.setLastUpdated(Instant.now());
+    walletRepository.save(wallet);
+
+    // Send OTP for verification
+    otpService.sendOtp(savedUser.getEmail());
+
+    return userMapper.entityToDto(savedUser); // You can still return the DTO or change to void/String
+}
 
     @Override
     public UserDto findByEmail(String email) {

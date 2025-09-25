@@ -9,9 +9,11 @@ import com.aurionpro.app.dto.StationDto;
 public interface StationService {
     StationDto addStation(CreateStationRequest createRequest);
     
-    // New method for adding multiple stations
+    //method for adding multiple stations
     List<StationDto> addStations(List<CreateStationRequest> createRequests);
-
+    
+    StationDto updateStation(Integer stationId, CreateStationRequest updateRequest);//for updating station
+    
     StationDto getStationById(Integer id);
     List<StationDto> getAllStations();
     void deleteStation(Integer id);
