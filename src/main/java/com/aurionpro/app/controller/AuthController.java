@@ -1,5 +1,3 @@
-// In: src/main/java/com/aurionpro/app/controller/AuthController.java
-
 package com.aurionpro.app.controller;
 
 import com.aurionpro.app.dto.*;
@@ -19,7 +17,7 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.stream.Collectors;
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1/auth")
@@ -96,10 +94,9 @@ public class AuthController {
     	
     	boolean isUser = userDetails.getAuthorities().stream()
     			.map(GrantedAuthority::getAuthority)
-    			.anyMatch("ROLE_USER"::equals);
+    			.anyMatch(role -> role.equals("ROLE_USER") || role.equals("ROLE_STAFF"));
     	
     	if (!isUser) {
-    		// If not a user, deny access
     		return new ResponseEntity<>("Access Denied: This login is for users only.", HttpStatus.FORBIDDEN);
     	}
     	

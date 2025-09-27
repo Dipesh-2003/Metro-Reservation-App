@@ -111,20 +111,27 @@
 			<artifactId>javase</artifactId>
 			<version>3.5.3</version>
 		</dependency>
-		
+
 		<!--email sending library-->
-		
+
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-mail</artifactId>
 		</dependency>
-		
-		
+
+
 		<!-- Cloudinary SDK for File Uploads -->
 		<dependency>
 			<groupId>com.cloudinary</groupId>
 			<artifactId>cloudinary-http44</artifactId>
 			<version>1.38.0</version>
+		</dependency>
+	
+		<!--razorpay dependency-->
+		<dependency>
+			<groupId>com.razorpay</groupId>
+			<artifactId>razorpay-java</artifactId>
+			<version>1.4.6</version>
 		</dependency>
 	</dependencies>
 

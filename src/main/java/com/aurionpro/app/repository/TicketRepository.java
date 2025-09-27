@@ -1,6 +1,7 @@
 package com.aurionpro.app.repository;
 
 import com.aurionpro.app.dto.SalesReportDto;
+import com.aurionpro.app.entity.Station;
 import com.aurionpro.app.entity.Ticket;
 import com.aurionpro.app.entity.User;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -23,4 +24,6 @@ public interface TicketRepository extends JpaRepository<Ticket, Integer> {
             "WHERE t.issueDate BETWEEN :startDate AND :endDate " +
             "AND t.status <> com.aurionpro.app.common.TicketStatus.CANCELLED")
      SalesReportDto getSalesReport(@Param("startDate") LocalDate startDate, @Param("endDate") LocalDate endDate);
+
+	Optional<Ticket> findByTicketNumber(String ticketNumber);
 }
