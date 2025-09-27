@@ -29,5 +29,17 @@ public class AdminInitializer implements CommandLineRunner {
             userRepository.save(admin);
             System.out.println(">>>>>>>>>> Created default admin user <<<<<<<<<<");
         }
+        
+        Optional<User> staffUser = userRepository.findByEmail("staff@metro.com");
+        if (staffUser.isEmpty()) {
+            User staff = new User();
+            staff.setName("Staff Member");
+            staff.setEmail("staff@metro.com");
+            staff.setPassword(passwordEncoder.encode("staff123")); // Set a default password
+            staff.setRole(Role.STAFF);
+            staff.setEnabled(true); // Staff accounts should be enabled by default
+            userRepository.save(staff);
+            System.out.println(">>>>>>>>>> Created default staff user <<<<<<<<<<");
+        }
     }
 }

@@ -1,7 +1,12 @@
 package com.aurionpro.app.repository;
 
-import com.aurionpro.app.entity.Validation;
+import java.util.List;
+
 import org.springframework.data.jpa.repository.JpaRepository;
 
+import com.aurionpro.app.entity.Validation;
+
 public interface ValidationRepository extends JpaRepository<Validation, Integer> {
+    List<Validation> findByTicketTicketIdOrderByValidationTimeDesc(Integer ticketId);
+
 }
