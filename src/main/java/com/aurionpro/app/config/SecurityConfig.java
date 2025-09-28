@@ -40,16 +40,18 @@ public class SecurityConfig {
 				// Also permit swagger documentation paths
 				.requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
 
+				.requestMatchers("/api/v1/payments/webhook/**").permitAll()
 				// Permit the public fare calculation endpoint
 				.requestMatchers(HttpMethod.GET, "/api/v1/tickets/fare").permitAll()
 
 				// Any other request that doesn't match the rules above must be authenticated
 				.anyRequest().authenticated())
-				.sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-				.authenticationProvider(authenticationProvider())
-				.addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
+                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .authenticationProvider(authenticationProvider())
+                .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 
-		return http.build();
+        return http.build();
+
 	}
 
 	@Bean

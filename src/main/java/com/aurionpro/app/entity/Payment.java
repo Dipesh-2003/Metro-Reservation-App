@@ -17,6 +17,11 @@ public class Payment {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "payment_id")
     private Integer paymentId;
+    
+    // --- ADD THIS RELATIONSHIP ---
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", nullable = false)
+    private User user;
 
 //    @ManyToOne
 //    @JoinColumn(name = "ticket_id", nullable = false)
