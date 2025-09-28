@@ -81,7 +81,7 @@ public class AuthController {
     }
 
     @PostMapping("/user/login")
-    @Operation(summary = "Login for regular users", description = "Authenticates a user and returns a JWT if they have the USER role.")
+    @Operation(summary = "Login for regular users and staff", description = "Authenticates a user and returns a JWT if they have the USER role.")
     public ResponseEntity<?> loginUser(@RequestBody LoginRequest loginRequest) {
     	authenticationManager.authenticate(
     			new UsernamePasswordAuthenticationToken(
