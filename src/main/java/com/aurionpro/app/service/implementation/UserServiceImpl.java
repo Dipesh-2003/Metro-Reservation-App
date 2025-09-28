@@ -89,4 +89,10 @@ public class UserServiceImpl implements UserService {
         User updatedUser = userRepository.save(user);
         return userMapper.entityToDto(updatedUser);
     }
+
+    @Override
+    public User findUserEntityById(Integer userId) {
+        return userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found with ID: " + userId));
+    }
 }

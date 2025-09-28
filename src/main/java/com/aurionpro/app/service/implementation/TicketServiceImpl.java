@@ -54,63 +54,25 @@ public class TicketServiceImpl implements TicketService {
     @Override
     @Transactional
     public TicketDto bookTicket(BookingRequest bookingRequest, User user) {
+        if (bookingRequest.getPaymentMethod() != PaymentMethod.WALLET) {
+            throw new InvalidOperationException("This booking method is only for wallet payments.");
+        }
+        
         BigDecimal fare = calculateFare(bookingRequest.getOriginStationId(), bookingRequest.getDestinationStationId()).getFare();
 
-        // 1. Handle Payment
         Payment payment = new Payment();
         payment.setAmount(fare);
-        payment.setPaymentMethod(bookingRequest.getPaymentMethod());
-        payment.setStatus(PaymentStatus.PENDING);
+        payment.setPaymentMethod(PaymentMethod.WALLET);
         payment.setCreatedAt(Instant.now());
+        payment.setUser(user);
 
-        if (bookingRequest.getPaymentMethod() == PaymentMethod.WALLET) {
-            Wallet userWallet = walletService.getWalletByUser(user);
-            walletService.debit(userWallet, fare);
-            payment.setStatus(PaymentStatus.COMPLETED);
-        } else {
-            payment.setStatus(PaymentStatus.COMPLETED);
-        }
+        Wallet userWallet = walletService.getWalletByUser(user);
+        walletService.debit(userWallet, fare);
+        payment.setStatus(PaymentStatus.COMPLETED);
+        
         Payment savedPayment = paymentRepository.save(payment);
 
-        // 2. Fetch Stations
-        Station origin = stationRepository.findById(bookingRequest.getOriginStationId())
-                .orElseThrow(() -> new ResourceNotFoundException("Origin station not found"));
-        Station destination = stationRepository.findById(bookingRequest.getDestinationStationId())
-                .orElseThrow(() -> new ResourceNotFoundException("Destination station not found"));
-
-        // 3. Create and Save Ticket with QR Code
-        Ticket ticket = new Ticket();
-        ticket.setUser(user);
-        ticket.setOriginStation(origin);
-        ticket.setDestinationStation(destination);
-        ticket.setFare(fare);
-        ticket.setTicketType(bookingRequest.getTicketType());
-        ticket.setPayment(savedPayment);
-        ticket.setBookingTime(Instant.now());
-        ticket.setIssueDate(LocalDate.now());
-        ticket.setExpiryTime(Instant.now().plus(24, ChronoUnit.HOURS));
-        ticket.setStatus(TicketStatus.CONFIRMED);
-
-        // --- QR Code Generation Logic ---
-        // a. Generate a unique ticket number first
-        String ticketNumber = UUID.randomUUID().toString();
-        ticket.setTicketNumber(ticketNumber);
-
-        // b. Create a structured JSON payload for the QR code
-        String qrPayload = String.format(
-            "{\"ticketNumber\":\"%s\",\"userId\":%d,\"origin\":\"%s\",\"destination\":\"%s\"}",
-            ticketNumber,
-            user.getUserId(),
-            origin.getName(),
-            destination.getName()
-        );
-
-        // c. Generate the QR code as a Base64 string and set it
-        String qrCodeBase64 = qrCodeService.generateQRCodeBase64(qrPayload);
-        ticket.setQrCodePayload(qrCodeBase64); // This now correctly sets the Base64 image data
-        
-        Ticket savedTicket = ticketRepository.save(ticket);
-        return ticketMapper.entityToDto(savedTicket);
+        return createTicketForConfirmedPayment(bookingRequest, user, savedPayment);
     }
 
     @Override
@@ -151,5 +113,41 @@ public class TicketServiceImpl implements TicketService {
     public List<TicketDto> getTicketHistory(User user) {
         List<Ticket> tickets = ticketRepository.findByUserOrderByBookingTimeDesc(user);
         return ticketMapper.entityToDto(tickets);
+    }
+
+    @Override
+    @Transactional
+    public TicketDto createTicketForConfirmedPayment(BookingRequest bookingRequest, User user, Payment payment) {
+        BigDecimal fare = payment.getAmount();
+        Station origin = stationRepository.findById(bookingRequest.getOriginStationId())
+                .orElseThrow(() -> new ResourceNotFoundException("Origin station not found"));
+        Station destination = stationRepository.findById(bookingRequest.getDestinationStationId())
+                .orElseThrow(() -> new ResourceNotFoundException("Destination station not found"));
+
+        Ticket ticket = new Ticket();
+        ticket.setUser(user);
+        ticket.setOriginStation(origin);
+        ticket.setDestinationStation(destination);
+        ticket.setFare(fare);
+        ticket.setTicketType(bookingRequest.getTicketType());
+        ticket.setPayment(payment);
+        ticket.setBookingTime(Instant.now());
+        ticket.setIssueDate(LocalDate.now());
+        ticket.setExpiryTime(Instant.now().plus(24, ChronoUnit.HOURS));
+        ticket.setStatus(TicketStatus.CONFIRMED);
+
+        String ticketNumber = UUID.randomUUID().toString();
+        ticket.setTicketNumber(ticketNumber);
+
+        String qrPayload = String.format(
+            "{\"ticketNumber\":\"%s\",\"userId\":%d,\"origin\":\"%s\",\"destination\":\"%s\"}",
+            ticketNumber, user.getUserId(), origin.getName(), destination.getName()
+        );
+
+        String qrCodeBase64 = qrCodeService.generateQRCodeBase64(qrPayload);
+        ticket.setQrCodePayload(qrCodeBase64);
+        
+        Ticket savedTicket = ticketRepository.save(ticket);
+        return ticketMapper.entityToDto(savedTicket);
     }
 }

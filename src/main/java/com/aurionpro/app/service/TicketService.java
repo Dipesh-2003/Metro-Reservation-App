@@ -1,10 +1,12 @@
 package com.aurionpro.app.service;
 
+import java.util.List;
+
 import com.aurionpro.app.dto.BookingRequest;
 import com.aurionpro.app.dto.FareResponse;
 import com.aurionpro.app.dto.TicketDto;
+import com.aurionpro.app.entity.Payment;
 import com.aurionpro.app.entity.User;
-import java.util.List;
 
 public interface TicketService {
     FareResponse calculateFare(Integer originId, Integer destId);
@@ -13,4 +15,6 @@ public interface TicketService {
     
     TicketDto getTicketByIdAndUser(Integer ticketId, User user);
     TicketDto cancelTicket(Integer ticketId, User user);
+    
+    TicketDto createTicketForConfirmedPayment(BookingRequest bookingRequest, User user, Payment payment);
 }

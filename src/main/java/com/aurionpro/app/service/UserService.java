@@ -9,6 +9,8 @@ public interface UserService {
     UserDto findByEmail(String email);
     
     User findUserEntityByEmail(String email);
+    
+    User findUserEntityById(Integer userId);
     UserDto updateUserProfileImage(String email, String imageUrl);
 
 }
