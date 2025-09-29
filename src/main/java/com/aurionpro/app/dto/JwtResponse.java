@@ -1,11 +1,15 @@
 package com.aurionpro.app.dto;
 
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 @Data
 @AllArgsConstructor
+@NoArgsConstructor
+@Builder
 public class JwtResponse {
     private String accessToken;
-    // You can add a refreshToken here later if needed
+    private String refreshToken;
 }

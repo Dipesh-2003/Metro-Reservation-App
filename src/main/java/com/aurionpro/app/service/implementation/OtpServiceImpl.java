@@ -4,6 +4,7 @@ import com.aurionpro.app.common.Role;
 import com.aurionpro.app.dto.JwtResponse;
 import com.aurionpro.app.dto.VerifyOtpRequestDto;
 import com.aurionpro.app.entity.OtpVerification;
+import com.aurionpro.app.entity.RefreshToken;
 import com.aurionpro.app.entity.User;
 import com.aurionpro.app.entity.Wallet;
 import com.aurionpro.app.exception.InvalidOperationException;
@@ -13,6 +14,8 @@ import com.aurionpro.app.repository.UserRepository;
 import com.aurionpro.app.repository.WalletRepository;
 import com.aurionpro.app.security.JwtService;
 import com.aurionpro.app.service.OtpService;
+import com.aurionpro.app.service.RefreshTokenService;
+
 import lombok.RequiredArgsConstructor;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
@@ -35,6 +38,7 @@ public class OtpServiceImpl implements OtpService {
     private final WalletRepository walletRepository;
     private final JavaMailSender mailSender;
     private final JwtService jwtService;
+    private final RefreshTokenService refreshTokenService; 
 
     @Override
     @Transactional
@@ -80,23 +84,27 @@ public class OtpServiceImpl implements OtpService {
         // Find the corresponding user, who must exist and be disabled
         User user = userRepository.findByEmail(verifyRequest.getEmail())
                 .orElseThrow(() -> new ResourceNotFoundException("User not found for this OTP verification request."));
-
+        
+        
         if (user.isEnabled()) {
             throw new InvalidOperationException("This user account is already verified.");
         }
 
-        // Mark OTP as verified
+        //OTP as verified
         otp.setIsVerified(true);
         otpRepository.save(otp);
 
         // Enable the user
         user.setEnabled(true);
         userRepository.save(user);
-        
-        // IMPORTANT: We no longer return a JWT here. 
-        // We will modify the controller to return a simple message.
-        // For now, returning null and we will fix the controller next.
-        return null; 
+
+        String accessToken = jwtService.generateToken(user);
+        RefreshToken refreshToken = refreshTokenService.createRefreshToken(user);
+
+        return JwtResponse.builder()
+                .accessToken(accessToken)
+                .refreshToken(refreshToken.getToken())
+                .build(); 
     }
 
     private User createNewUser(String email) {
@@ -116,4 +124,5 @@ public class OtpServiceImpl implements OtpService {
 
         return savedUser;
     }
+    
 }

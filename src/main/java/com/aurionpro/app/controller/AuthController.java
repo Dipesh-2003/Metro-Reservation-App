@@ -1,13 +1,7 @@
 package com.aurionpro.app.controller;
 
-import com.aurionpro.app.dto.*;
-import com.aurionpro.app.security.JwtService;
-import com.aurionpro.app.service.OtpService;
-import com.aurionpro.app.service.UserService;
+import java.security.Principal;
 
-import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.tags.Tag;
-import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -15,9 +9,27 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
-import java.util.List;
+import com.aurionpro.app.dto.JwtResponse;
+import com.aurionpro.app.dto.LoginRequest;
+import com.aurionpro.app.dto.RefreshTokenRequest;
+import com.aurionpro.app.dto.SignUpRequest;
+import com.aurionpro.app.dto.VerifyOtpRequestDto;
+import com.aurionpro.app.entity.RefreshToken;
+import com.aurionpro.app.entity.User;
+import com.aurionpro.app.security.JwtService;
+import com.aurionpro.app.service.OtpService;
+import com.aurionpro.app.service.RefreshTokenService;
+import com.aurionpro.app.service.UserService;
+
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import lombok.RequiredArgsConstructor;
 
 @RestController
 @RequestMapping("/api/v1/auth")
@@ -30,6 +42,7 @@ public class AuthController {
     private final JwtService jwtService;
     private final UserDetailsService userDetailsService;
     private final OtpService otpService;
+    private final RefreshTokenService refreshTokenService;
 
     @PostMapping("/register")
     @Operation(summary = "1. Register a new user and send verification OTP", description = "Creates a new, disabled user and sends an OTP to their email for account verification.")
@@ -63,7 +76,13 @@ public class AuthController {
 
         // Step 4: Generate and return the JWT
         final String jwtToken = jwtService.generateToken(userDetails);
-        return ResponseEntity.ok(new JwtResponse(jwtToken));
+        String accessToken = jwtService.generateToken(userDetails);
+        RefreshToken refreshToken = refreshTokenService.createRefreshToken((User) userDetails);
+
+        return ResponseEntity.ok(JwtResponse.builder()
+                .accessToken(accessToken)
+                .refreshToken(refreshToken.getToken())
+                .build());
     }
     
 //    @PostMapping("/send-otp")
@@ -74,10 +93,10 @@ public class AuthController {
 //    }
 
     @PostMapping("/verify-otp")
-    @Operation(summary = "2. Verify registration OTP", description = "Verifies the OTP sent during registration to activate the user's account.")
-    public ResponseEntity<String> verifyOtp(@RequestBody VerifyOtpRequestDto verifyRequest) {
-        otpService.verifyOtp(verifyRequest);
-        return ResponseEntity.ok("Account verified successfully. You may now log in.");
+    @Operation(summary = "2. Verify registration OTP and get tokens", description = "Verifies the OTP to activate the account and returns access and refresh tokens.")
+    public ResponseEntity<JwtResponse> verifyOtp(@RequestBody VerifyOtpRequestDto verifyRequest) { // <-- Change return type
+        JwtResponse jwtResponse = otpService.verifyOtp(verifyRequest);
+        return ResponseEntity.ok(jwtResponse);
     }
 
     @PostMapping("/user/login")
@@ -101,6 +120,38 @@ public class AuthController {
     	}
     	
     	final String jwtToken = jwtService.generateToken(userDetails);
-    	return ResponseEntity.ok(new JwtResponse(jwtToken));
+    	String accessToken = jwtService.generateToken(userDetails);
+        RefreshToken refreshToken = refreshTokenService.createRefreshToken((User) userDetails);
+
+        return ResponseEntity.ok(JwtResponse.builder()
+                .accessToken(accessToken)
+                .refreshToken(refreshToken.getToken())
+                .build());
+
+    }
+    
+    @PostMapping("/refresh")
+    @Operation(summary = "Refresh access token", description = "Generates a new access token using a valid refresh token.")
+    public ResponseEntity<JwtResponse> refreshToken(@RequestBody RefreshTokenRequest request) {
+        //verify the refresh token
+        RefreshToken refreshToken = refreshTokenService.verifyRefreshToken(request.getRefreshToken());
+        
+        //generate a new access token for the user associated with the refresh token
+        String newAccessToken = jwtService.generateToken(refreshToken.getUser());
+        
+        return ResponseEntity.ok(JwtResponse.builder()
+                .accessToken(newAccessToken)
+                .refreshToken(refreshToken.getToken())
+                .build());
+    }
+
+    //logout endpoint
+    @PostMapping("/logout")
+    @Operation(summary = "Logout user", description = "Revokes the user's refresh token, effectively logging them out.")
+    @SecurityRequirement(name = "bearerAuth") //requires an access token to identify the user
+    public ResponseEntity<String> logout(Principal principal) {
+        User currentUser = userService.findUserEntityByEmail(principal.getName());
+        refreshTokenService.deleteRefreshToken(currentUser);
+        return ResponseEntity.ok("User logged out successfully.");
     }
 }
