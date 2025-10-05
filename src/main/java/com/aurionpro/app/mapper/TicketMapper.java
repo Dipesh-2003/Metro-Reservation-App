@@ -12,6 +12,7 @@ public interface TicketMapper {
 
     @Mapping(source = "originStation.name", target = "originStationName")
     @Mapping(source = "destinationStation.name", target = "destinationStationName")
+    @Mapping(target = "qrCodeImage", ignore = true)
     TicketDto entityToDto(Ticket ticket);
 
     List<TicketDto> entityToDto(List<Ticket> tickets);

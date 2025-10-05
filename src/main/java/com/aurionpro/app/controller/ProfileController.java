@@ -1,22 +1,26 @@
-// Create New File: src/main/java/com/aurionpro/app/controller/ProfileController.java
-
 package com.aurionpro.app.controller;
 
+import java.security.Principal;
+
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+import com.aurionpro.app.dto.CloudinarySignatureResponse;
+import com.aurionpro.app.dto.DeleteAccountRequest;
+import com.aurionpro.app.dto.UpdateProfileImageRequest;
 import com.aurionpro.app.dto.UserDto;
 import com.aurionpro.app.service.FileUploadService;
 import com.aurionpro.app.service.UserService;
+
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
-import org.springframework.web.multipart.MultipartFile;
-
-import java.io.IOException;
-import java.security.Principal;
+import org.springframework.web.bind.annotation.*; // <-- Update import to include @DeleteMapping
 
 @RestController
 @RequestMapping("/api/v1/profile")
@@ -28,26 +32,34 @@ public class ProfileController {
     private final FileUploadService fileUploadService;
     private final UserService userService;
 
-    @PostMapping(value = "/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    @Operation(summary = "Upload or update profile picture", description = "Uploads an image file to Cloudinary and updates the authenticated user's profile image URL.")
-    public ResponseEntity<UserDto> uploadProfileImage(@RequestParam("file") MultipartFile file, Principal principal) {
-        try {
-            // Check if the file is empty
-            if (file.isEmpty()) {
-                return ResponseEntity.badRequest().build();
-            }
+    // The old proxy upload method has been removed to enforce the signed upload flow.
 
-            // Upload the file and get the URL
-            String imageUrl = fileUploadService.uploadFile(file);
+    /**
+     * Step 1 of the signed upload process.
+     * The client calls this endpoint to get a secure signature.
+     */
+    @PostMapping("/upload/signature")
+    @Operation(summary = "Get a signature for direct Cloudinary upload (Step 1)", description = "Generates a temporary, secure signature that the client can use to upload a file directly to Cloudinary.")
+    public ResponseEntity<CloudinarySignatureResponse> getUploadSignature() {
+        return ResponseEntity.ok(fileUploadService.generateUploadSignature());
+    }
 
-            // Update the user's profile with the new image URL
-            UserDto updatedUser = userService.updateUserProfileImage(principal.getName(), imageUrl);
-
-            return ResponseEntity.ok(updatedUser);
-
-        } catch (IOException e) {
-            // Handle exceptions during file upload
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
-        }
+    /**
+     * Step 2 of the signed upload process.
+     * After the client uploads the file to Cloudinary, it calls this endpoint to save the URL.
+     */
+    @PostMapping("/update-image-url")
+    @Operation(summary = "Update user's profile image URL (Step 2)", description = "After a successful direct upload to Cloudinary, the client sends the resulting URL to this endpoint to save it.")
+    public ResponseEntity<UserDto> updateProfileImageUrl(@RequestBody UpdateProfileImageRequest request, Principal principal) {
+        // Find the user and update their profile image URL with the one from Cloudinary
+        UserDto updatedUser = userService.updateUserProfileImage(principal.getName(), request.getImageUrl());
+        return ResponseEntity.ok(updatedUser);
+    }
+    
+    @DeleteMapping("/me")
+    @Operation(summary = "Delete the authenticated user's account", description = "Permanently deletes the user's account and all associated data. This action is irreversible and requires password confirmation.")
+    public ResponseEntity<String> deleteAccount(@RequestBody DeleteAccountRequest request, Principal principal) {
+        userService.deleteUserAccount(principal.getName(), request.getPassword());
+        return ResponseEntity.ok("Your account has been successfully deleted.");
     }
 }
