@@ -55,7 +55,7 @@ public class Ticket {
     private Instant expiryTime;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
+    @Column(nullable = false, length = 20)
     private TicketStatus status;
 
     @Column(name = "qr_code_payload", columnDefinition = "TEXT")

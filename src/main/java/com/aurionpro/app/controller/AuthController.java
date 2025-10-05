@@ -16,7 +16,9 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.aurionpro.app.dto.JwtResponse;
 import com.aurionpro.app.dto.LoginRequest;
+import com.aurionpro.app.dto.OtpRequestDto;
 import com.aurionpro.app.dto.RefreshTokenRequest;
+import com.aurionpro.app.dto.ResetPasswordRequest;
 import com.aurionpro.app.dto.SignUpRequest;
 import com.aurionpro.app.dto.VerifyOtpRequestDto;
 import com.aurionpro.app.entity.RefreshToken;
@@ -153,5 +155,19 @@ public class AuthController {
         User currentUser = userService.findUserEntityByEmail(principal.getName());
         refreshTokenService.deleteRefreshToken(currentUser);
         return ResponseEntity.ok("User logged out successfully.");
+    }
+    
+    @PostMapping("/forgot-password")
+    @Operation(summary = "Step 1: Request a password reset OTP", description = "Sends an OTP to the user's email if the account exists.")
+    public ResponseEntity<String> forgotPassword(@RequestBody OtpRequestDto request) {
+        userService.forgotPassword(request.getEmail());
+        return ResponseEntity.ok("An OTP has been sent to your email address to reset your password.");
+    }
+    
+    @PostMapping("/reset-password")
+    @Operation(summary = "Step 2: Verify OTP and set a new password", description = "Verifies the OTP and updates the user's password to the new one provided.")
+    public ResponseEntity<String> resetPassword(@RequestBody ResetPasswordRequest request) {
+        userService.resetPassword(request);
+        return ResponseEntity.ok("Your password has been reset successfully.");
     }
 }

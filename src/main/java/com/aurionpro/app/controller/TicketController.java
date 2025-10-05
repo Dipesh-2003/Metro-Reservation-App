@@ -68,7 +68,6 @@ public class TicketController {
         return ResponseEntity.ok(cancelledTicket);
     }
 
-    // --- NEW DOWNLOAD ENDPOINT ---
     @GetMapping("/{ticketId}/download")
     @Operation(summary = "Download ticket QR code", description = "Downloads the QR code for a specific ticket as a PNG image.")
     @SecurityRequirement(name = "bearerAuth")
@@ -76,10 +75,9 @@ public class TicketController {
         User currentUser = userService.findUserEntityByEmail(principal.getName());
         TicketDto ticket = ticketService.getTicketByIdAndUser(ticketId, currentUser);
 
-        // Decode the Base64 string from the DTO into raw image bytes
-        byte[] qrCodeImage = Base64.getDecoder().decode(ticket.getQrCodePayload());
+        // --- Use the new qrCodeImage field ---
+        byte[] qrCodeImage = Base64.getDecoder().decode(ticket.getQrCodeImage());
 
-        // Set up HTTP headers to tell the browser to download the file
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.IMAGE_PNG);
         headers.setContentDispositionFormData("attachment", "ticket_" + ticket.getTicketNumber() + ".png");
