@@ -22,13 +22,13 @@ import java.time.Instant;
 import java.util.List;
 
 @Service
-@RequiredArgsConstructor // Use Lombok for constructor injection
+@RequiredArgsConstructor 
 public class WalletServiceImpl implements WalletService {
 
     private final WalletRepository walletRepository;
     private final WalletTransactionRepository transactionRepository;
     private final UserMapper userMapper;
-    private final UserService userService; // Assuming you have a UserService
+    private final UserService userService; 
 
     @Override
     public WalletDto getWalletDetailsForUser(User user) {
@@ -58,7 +58,6 @@ public class WalletServiceImpl implements WalletService {
         wallet.setLastUpdated(Instant.now());
         walletRepository.save(wallet);
 
-        // Record the transaction
         WalletTransaction transaction = new WalletTransaction();
         transaction.setWallet(wallet);
         transaction.setAmount(amount);
@@ -67,7 +66,6 @@ public class WalletServiceImpl implements WalletService {
         transactionRepository.save(transaction);
     }
     
-    // --- NEW IMPLEMENTATION ---
     @Override
     @Transactional
     public WalletDto rechargeWallet(User user, RechargeRequest rechargeRequest) {
@@ -82,7 +80,6 @@ public class WalletServiceImpl implements WalletService {
         wallet.setLastUpdated(Instant.now());
         Wallet savedWallet = walletRepository.save(wallet);
 
-        // Record the transaction
         WalletTransaction transaction = new WalletTransaction();
         transaction.setWallet(savedWallet);
         transaction.setAmount(rechargeRequest.getAmount());

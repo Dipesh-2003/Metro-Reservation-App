@@ -1,5 +1,6 @@
 package com.aurionpro.app.controller;
 
+import com.aurionpro.app.common.TicketType;
 import com.aurionpro.app.dto.BookingRequest;
 import com.aurionpro.app.dto.FareResponse;
 import com.aurionpro.app.dto.TicketDto;
@@ -29,9 +30,12 @@ public class TicketController {
     private final UserService userService;
 
     @GetMapping("/fare")
-    @Operation(summary = "Calculate ticket fare", description = "Calculates the fare between two stations. Does not require authentication.")
-    public ResponseEntity<FareResponse> getFare(@RequestParam Integer originId, @RequestParam Integer destId) {
-        return ResponseEntity.ok(ticketService.calculateFare(originId, destId));
+    @Operation(summary = "Calculate ticket fare", description = "Calculates the fare based on origin, destination, and ticket type. Does not require authentication.")
+    public ResponseEntity<FareResponse> getFare(
+            @RequestParam Integer originId, 
+            @RequestParam Integer destId,
+            @RequestParam(required = false) TicketType ticketType) {
+        return ResponseEntity.ok(ticketService.calculateFare(originId, destId, ticketType));
     }
 
     @PostMapping("/book")
@@ -75,7 +79,6 @@ public class TicketController {
         User currentUser = userService.findUserEntityByEmail(principal.getName());
         TicketDto ticket = ticketService.getTicketByIdAndUser(ticketId, currentUser);
 
-        // --- Use the new qrCodeImage field ---
         byte[] qrCodeImage = Base64.getDecoder().decode(ticket.getQrCodeImage());
 
         HttpHeaders headers = new HttpHeaders();

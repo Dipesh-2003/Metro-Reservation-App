@@ -19,6 +19,9 @@ public class Station {
 
     @Column(nullable = false)
     private String code;
+    
+    @Column(nullable = false, unique = true)
+    private Integer stationOrder;
 
     @Column(nullable = false)
     private Boolean active = true;

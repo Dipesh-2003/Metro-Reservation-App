@@ -12,7 +12,7 @@ import java.time.Instant;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-@Builder // A Lombok annotation that helps in building objects easily
+@Builder //lombok annotation that helps in building objects easily
 public class RefreshToken {
 
     @Id

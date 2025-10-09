@@ -18,7 +18,7 @@ import java.security.Principal;
 @RequestMapping("/api/v1/wallets")
 @RequiredArgsConstructor
 @Tag(name = "4. Wallet Management", description = "APIs for managing user wallets")
-@SecurityRequirement(name = "bearerAuth") // Apply security to all endpoints in this controller
+@SecurityRequirement(name = "bearerAuth") //security to all endpoints in this controller
 public class WalletController {
 
     private final WalletService walletService;

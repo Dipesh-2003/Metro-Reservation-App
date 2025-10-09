@@ -66,7 +66,6 @@ public class UserServiceImpl implements UserService {
             if (existingUser.isEnabled()) {
                 throw new InvalidOperationException("User with this email already exists.");
             } else {
-                // If the user exists but is not enabled, delete them to allow a fresh registration attempt
                 userRepository.delete(existingUser);
             }
         });
@@ -76,21 +75,19 @@ public class UserServiceImpl implements UserService {
     user.setEmail(signUpRequest.getEmail());
     user.setPassword(passwordEncoder.encode(signUpRequest.getPassword()));
     user.setRole(Role.USER);
-    user.setEnabled(false); // <-- Set user as disabled by default
+    user.setEnabled(false); 
     
     User savedUser = userRepository.save(user);
 
-    // Wallet creation logic remains the same
     Wallet wallet = new Wallet();
     wallet.setUser(savedUser);
     wallet.setBalance(BigDecimal.ZERO);
     wallet.setLastUpdated(Instant.now());
     walletRepository.save(wallet);
 
-    // Send OTP for verification
     otpService.sendOtp(savedUser.getEmail());
 
-    return userMapper.entityToDto(savedUser); // You can still return the DTO or change to void/String
+    return userMapper.entityToDto(savedUser); 
 }
 
     @Override
@@ -123,61 +120,42 @@ public class UserServiceImpl implements UserService {
     @Override
     @Transactional
     public void deleteUserAccount(String email, String password) {
-        // Step 1: Find the user by their email
         User user = findUserEntityByEmail(email);
 
-        // Step 2: Validate the provided password
         if (!passwordEncoder.matches(password, user.getPassword())) {
             throw new BadCredentialsException("Incorrect password. Account deletion failed.");
         }
 
-        // --- REVISED DELETION ORDER ---
-
-        // Step 3: Delete entities that depend on the user but not on each other.
-        
-        // A) Delete the user's refresh token
         refreshTokenRepository.deleteByUser(user);
 
-        // B) Find and delete the user's wallet and its transactions
         walletRepository.findByUser(user).ifPresent(wallet -> {
             walletTransactionRepository.deleteAll(walletTransactionRepository.findByWalletOrderByTransactionTimeDesc(wallet));
             walletRepository.delete(wallet);
         });
         
-        // C) Find and delete all validations associated with the user's tickets
         List<Ticket> tickets = ticketRepository.findByUserOrderByBookingTimeDesc(user);
         if (!tickets.isEmpty()) {
-            // This part is missing in your current code, you need to delete validation records
-            // Assuming you have a ValidationRepository with a `deleteAllByTicketIn` method or similar.
-            // If not, you would loop through tickets and delete validations for each.
         }
 
-        // D) Delete all tickets associated with the user
         ticketRepository.deleteAll(tickets);
         
-        // E) NOW, find and delete ALL payments associated with the user
-        // This is the key fix. This will include payments from tickets AND other sources.
         List<Payment> payments = paymentRepository.findByUser(user);
         paymentRepository.deleteAll(payments);
 
-        // Step 4: After all dependencies are removed, delete the user itself
         userRepository.delete(user);
     }
 
     @Override
     @Transactional
     public void forgotPassword(String email) {
-        // Step 1: Check if a user with this email actually exists.
-        User user = findUserEntityByEmail(email); // This will throw ResourceNotFoundException if user doesn't exist.
+        User user = findUserEntityByEmail(email); 
 
-        // Step 2: If the user exists, send an OTP.
         otpService.sendOtp(email);
     }
 
     @Override
     @Transactional
     public void resetPassword(ResetPasswordRequest request) {
-        // Step 1: Find and validate the OTP.
         OtpVerification otp = otpRepository.findByEmailAndOtpCode(request.getEmail(), request.getOtpCode())
                 .orElseThrow(() -> new InvalidOperationException("Invalid OTP code provided."));
 
@@ -188,14 +166,11 @@ public class UserServiceImpl implements UserService {
             throw new InvalidOperationException("OTP has expired. Please request a new one.");
         }
 
-        // Step 2: If OTP is valid, find the user.
         User user = findUserEntityByEmail(request.getEmail());
 
-        // Step 3: Encode and set the new password.
         user.setPassword(passwordEncoder.encode(request.getNewPassword()));
         userRepository.save(user);
 
-        // Step 4: Mark the OTP as used to prevent it from being used again.
         otp.setIsVerified(true);
         otpRepository.save(otp);
     }

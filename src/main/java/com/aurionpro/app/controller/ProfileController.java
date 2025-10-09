@@ -32,22 +32,12 @@ public class ProfileController {
     private final FileUploadService fileUploadService;
     private final UserService userService;
 
-    // The old proxy upload method has been removed to enforce the signed upload flow.
-
-    /**
-     * Step 1 of the signed upload process.
-     * The client calls this endpoint to get a secure signature.
-     */
     @PostMapping("/upload/signature")
     @Operation(summary = "Get a signature for direct Cloudinary upload (Step 1)", description = "Generates a temporary, secure signature that the client can use to upload a file directly to Cloudinary.")
     public ResponseEntity<CloudinarySignatureResponse> getUploadSignature() {
         return ResponseEntity.ok(fileUploadService.generateUploadSignature());
     }
 
-    /**
-     * Step 2 of the signed upload process.
-     * After the client uploads the file to Cloudinary, it calls this endpoint to save the URL.
-     */
     @PostMapping("/update-image-url")
     @Operation(summary = "Update user's profile image URL (Step 2)", description = "After a successful direct upload to Cloudinary, the client sends the resulting URL to this endpoint to save it.")
     public ResponseEntity<UserDto> updateProfileImageUrl(@RequestBody UpdateProfileImageRequest request, Principal principal) {

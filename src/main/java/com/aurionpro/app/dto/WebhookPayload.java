@@ -24,9 +24,9 @@ public class WebhookPayload {
             @Data
             @JsonIgnoreProperties(ignoreUnknown = true)
             public static class EntityData {
-                private String id; // Razorpay Payment ID
-                private String order_id; // Razorpay Order ID
-                private String status; // "captured", "failed", etc.
+                private String id; //razorpay Payment ID
+                private String order_id; //razorpay Order ID
+                private String status;
                 private Map<String, String> notes;
             }
         }
