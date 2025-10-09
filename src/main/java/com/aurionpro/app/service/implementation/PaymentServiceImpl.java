@@ -50,10 +50,10 @@ public class PaymentServiceImpl implements PaymentService {
     @Transactional
     public UpiPaymentResponse createUpiOrder(UpiPaymentRequest request, User user) throws RazorpayException {
         // 1. Calculate the fare
-        BigDecimal fare = ticketService.calculateFare(request.getOriginStationId(), request.getDestinationStationId()).getFare();
+        // THIS IS THE LINE WE ARE FIXING
+        BigDecimal fare = ticketService.calculateFare(request.getOriginStationId(), request.getDestinationStationId(), request.getTicketType()).getFare();
 
         // 2. Create a Payment record in PENDING state
-     // 2. Create a Payment record in PENDING state
         Payment payment = new Payment();
         payment.setAmount(fare);
         payment.setPaymentMethod(PaymentMethod.UPI);

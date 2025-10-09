@@ -8,20 +8,17 @@ import java.math.BigDecimal;
 @Entity
 @Data
 @NoArgsConstructor
-public class FareRule {
+public class FareSlab {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "fare_rule_id")
-    private Integer fareRuleId;
+    private Integer slabId;
 
-    @ManyToOne
-    @JoinColumn(name = "origin_station_id", nullable = false)
-    private Station originStation;
+    @Column(nullable = false)
+    private Integer minStations;
 
-    @ManyToOne
-    @JoinColumn(name = "destination_station_id", nullable = false)
-    private Station destinationStation;
+    @Column(nullable = false)
+    private Integer maxStations;
 
     @Column(nullable = false, precision = 10, scale = 2)
     private BigDecimal fare;

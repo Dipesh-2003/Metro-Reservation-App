@@ -6,4 +6,5 @@ import lombok.Data;
 public class CreateStationRequest {
     private String name;
     private String code;
+    private Integer stationOrder;
 }
