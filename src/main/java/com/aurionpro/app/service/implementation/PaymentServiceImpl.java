@@ -20,6 +20,7 @@ import com.aurionpro.app.repository.PaymentRepository;
 import com.aurionpro.app.service.PaymentService;
 import com.aurionpro.app.service.TicketService;
 import com.aurionpro.app.service.UserService;
+import com.aurionpro.app.service.WalletService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.razorpay.Order;
 import com.razorpay.RazorpayClient;
@@ -34,11 +35,12 @@ import lombok.extern.slf4j.Slf4j;
 @RequiredArgsConstructor
 public class PaymentServiceImpl implements PaymentService {
 
-    private final RazorpayClient razorpayClient;
-    private final PaymentRepository paymentRepository;
-    private final TicketService ticketService; 
-    private final UserService userService;
-    private final ObjectMapper objectMapper = new ObjectMapper();
+		private final RazorpayClient razorpayClient;
+	    private final PaymentRepository paymentRepository;
+	    private final TicketService ticketService; 
+	    private final UserService userService;
+	    private final WalletService walletService;
+	    private final ObjectMapper objectMapper = new ObjectMapper();
     
     @Value("${razorpay.api.key}")
     private String apiKey;
@@ -75,6 +77,7 @@ public class PaymentServiceImpl implements PaymentService {
         notes.put("originStationId", request.getOriginStationId().toString());
         notes.put("destinationStationId", request.getDestinationStationId().toString());
         notes.put("ticketType", request.getTicketType().toString());
+        notes.put("type", "TICKET_PURCHASE");
         orderRequest.put("notes", notes);
         
         Order razorpayOrder = razorpayClient.orders.create(orderRequest);
@@ -90,16 +93,14 @@ public class PaymentServiceImpl implements PaymentService {
     
     @Override
     @Transactional
-    public void handleWebhook(String payload, String signature) { // <-- Notice the change to String payload
+    public void handleWebhook(String payload, String signature) {
         try {
-            // 1. Verify the webhook signature against the RAW payload string
             boolean isValid = Utils.verifyWebhookSignature(payload, signature, webhookSecret);
             if (!isValid) {
                 log.warn("Webhook signature verification failed.");
                 throw new InvalidOperationException("Invalid webhook signature.");
             }
             
-            // 2. If verification passes, THEN parse the string into an object
             JSONObject payloadJson = new JSONObject(payload);
             String event = payloadJson.getString("event");
 
@@ -108,36 +109,38 @@ public class PaymentServiceImpl implements PaymentService {
                  return;
             }
 
-         // 3. Extract relevant data from the parsed JSON
-            JSONObject payloadObject = payloadJson.getJSONObject("payload");
-            JSONObject paymentEntity = payloadObject.getJSONObject("payment").getJSONObject("entity"); // <-- FIX HERE
-
+            JSONObject paymentEntity = payloadJson.getJSONObject("payload").getJSONObject("payment").getJSONObject("entity");
             String razorpayOrderId = paymentEntity.getString("order_id");
             String status = paymentEntity.getString("status");
             JSONObject notesJson = paymentEntity.getJSONObject("notes");
             Integer paymentId = Integer.parseInt(notesJson.getString("paymentId"));
             
-            // 4. Find the payment in our database
             Payment payment = paymentRepository.findById(paymentId)
                     .orElseThrow(() -> new InvalidOperationException("Payment not found for ID: " + paymentId));
             
-            // 5. If payment was successful, create the ticket
             if ("captured".equalsIgnoreCase(status) && payment.getStatus() == PaymentStatus.PENDING) {
                 payment.setStatus(PaymentStatus.COMPLETED);
                 paymentRepository.save(payment);
-                
-                BookingRequest bookingRequest = new BookingRequest();
-                bookingRequest.setOriginStationId(Integer.parseInt(notesJson.getString("originStationId")));
-                bookingRequest.setDestinationStationId(Integer.parseInt(notesJson.getString("destinationStationId")));
-                bookingRequest.setTicketType(com.aurionpro.app.common.TicketType.valueOf(notesJson.getString("ticketType")));
-                bookingRequest.setPaymentMethod(PaymentMethod.UPI);
-                
-                Integer userId = Integer.parseInt(notesJson.getString("userId"));
-                User ticketUser = userService.findUserEntityById(userId);
-                
-                ticketService.createTicketForConfirmedPayment(bookingRequest, ticketUser, payment);
-                
-                log.info("Ticket created successfully for payment ID: {}", paymentId);
+
+                String paymentType = notesJson.optString("type", "TICKET_PURCHASE");
+
+                if ("WALLET_RECHARGE".equals(paymentType)) {
+                    walletService.creditWalletFromPayment(payment);
+                    log.info("Wallet credited successfully for payment ID: {}", paymentId);
+                } else {
+                    BookingRequest bookingRequest = new BookingRequest();
+                    bookingRequest.setOriginStationId(Integer.parseInt(notesJson.getString("originStationId")));
+                    bookingRequest.setDestinationStationId(Integer.parseInt(notesJson.getString("destinationStationId")));
+                    bookingRequest.setTicketType(com.aurionpro.app.common.TicketType.valueOf(notesJson.getString("ticketType")));
+                    bookingRequest.setPaymentMethod(PaymentMethod.UPI);
+                    
+                    Integer userId = Integer.parseInt(notesJson.getString("userId"));
+                    User ticketUser = userService.findUserEntityById(userId);
+                    
+                    ticketService.createTicketForConfirmedPayment(bookingRequest, ticketUser, payment);
+                    
+                    log.info("Ticket created successfully for payment ID: {}", paymentId);
+                }
             } else {
                  log.warn("Webhook received for non-captured payment or payment not in PENDING state. Status: {}, PaymentId: {}", status, paymentId);
             }

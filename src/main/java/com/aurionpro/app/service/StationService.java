@@ -12,6 +12,7 @@ public interface StationService {
     StationDto updateStation(Integer stationId, CreateStationRequest updateRequest);
     StationDto getStationById(Integer id);
     List<StationDto> getAllStations();
-    void deleteStation(Integer id);
+    void deactivateStation(Integer id);
+    void activateStation(Integer id);
     FareSlabDto addFareSlab(CreateFareSlabRequest fareSlabRequest);
 }
