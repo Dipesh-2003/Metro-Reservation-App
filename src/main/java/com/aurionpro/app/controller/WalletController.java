@@ -2,9 +2,11 @@ package com.aurionpro.app.controller;
 
 import com.aurionpro.app.dto.RechargeRequest;
 import com.aurionpro.app.dto.WalletDto;
+import com.aurionpro.app.dto.WalletRechargeResponse;
 import com.aurionpro.app.entity.User;
 import com.aurionpro.app.service.UserService;
 import com.aurionpro.app.service.WalletService;
+import com.razorpay.RazorpayException;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -18,7 +20,7 @@ import java.security.Principal;
 @RequestMapping("/api/v1/wallets")
 @RequiredArgsConstructor
 @Tag(name = "4. Wallet Management", description = "APIs for managing user wallets")
-@SecurityRequirement(name = "bearerAuth") //security to all endpoints in this controller
+@SecurityRequirement(name = "bearerAuth")
 public class WalletController {
 
     private final WalletService walletService;
@@ -32,11 +34,11 @@ public class WalletController {
         return ResponseEntity.ok(walletDetails);
     }
 
-    @PostMapping("/recharge")
-    @Operation(summary = "Recharge user's wallet", description = "Adds funds to the authenticated user's wallet. This is a mock payment for now.")
-    public ResponseEntity<WalletDto> rechargeWallet(@RequestBody RechargeRequest rechargeRequest, Principal principal) {
+    @PostMapping("/recharge/initiate")
+    @Operation(summary = "Initiate a wallet recharge using Razorpay", description = "Creates a Razorpay order for recharging the user's wallet.")
+    public ResponseEntity<WalletRechargeResponse> initiateWalletRecharge(@RequestBody RechargeRequest rechargeRequest, Principal principal) throws RazorpayException {
         User currentUser = userService.findUserEntityByEmail(principal.getName());
-        WalletDto updatedWallet = walletService.rechargeWallet(currentUser, rechargeRequest);
-        return ResponseEntity.ok(updatedWallet);
+        WalletRechargeResponse response = walletService.initiateWalletRecharge(currentUser, rechargeRequest);
+        return ResponseEntity.ok(response);
     }
 }

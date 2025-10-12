@@ -55,17 +55,10 @@ public class StationServiceImpl implements StationService {
 
     @Override
     public List<StationDto> getAllStations() {
-        List<Station> stations = stationRepository.findAll();
+        List<Station> stations = stationRepository.findAllByActiveTrue();
         return stationMapper.entityToDto(stations);
     }
 
-    @Override
-    public void deleteStation(Integer id) {
-        if (!stationRepository.existsById(id)) {
-            throw new ResourceNotFoundException("Station not found with ID: " + id);
-        }
-        stationRepository.deleteById(id);
-    }
 
     @Override
     public FareSlabDto addFareSlab(CreateFareSlabRequest fareSlabRequest) {
@@ -86,5 +79,21 @@ public class StationServiceImpl implements StationService {
         Station updatedStation = stationRepository.save(stationToUpdate);
 
         return stationMapper.entityToDto(updatedStation);
+    }
+
+    @Override
+    public void deactivateStation(Integer id) {
+        Station station = stationRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Station not found with ID: " + id));
+        station.setActive(false);
+        stationRepository.save(station);
+    }
+
+    @Override
+    public void activateStation(Integer id) {
+        Station station = stationRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Station not found with ID: " + id));
+        station.setActive(true);
+        stationRepository.save(station);
     }
 }

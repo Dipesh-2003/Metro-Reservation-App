@@ -68,14 +68,14 @@ public class AdminController {
         return ResponseEntity.ok(updatedStation);
     }
 
-    @DeleteMapping("/stations/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
-    @Operation(summary = "Delete a station (Admin only)", description = "Removes a metro station from the system by its ID.")
-    @SecurityRequirement(name = "bearerAuth")
-    public ResponseEntity<String> deleteStation(@PathVariable Integer id) {
-        stationService.deleteStation(id);
-        return ResponseEntity.ok("Station with ID " + id + " deleted successfully.");
-    }
+//    @DeleteMapping("/stations/{id}")
+//    @PreAuthorize("hasRole('ADMIN')")
+//    @Operation(summary = "Delete a station (Admin only)", description = "Removes a metro station from the system by its ID.")
+//    @SecurityRequirement(name = "bearerAuth")
+//    public ResponseEntity<String> deleteStation(@PathVariable Integer id) {
+//        stationService.deleteStation(id);
+//        return ResponseEntity.ok("Station with ID " + id + " deleted successfully.");
+//    }
 
     @GetMapping("/reports/sales")
     @PreAuthorize("hasRole('ADMIN')")
@@ -89,5 +89,23 @@ public class AdminController {
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to) {
         SalesReportDto report = ticketRepository.getSalesReport(from, to);
         return ResponseEntity.ok(report);
+    }
+    
+    @PatchMapping("/stations/{id}/deactivate")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "Deactivate a station (Admin only)", description = "Marks a metro station as inactive, preventing it from being used in new ticket bookings.")
+    @SecurityRequirement(name = "bearerAuth")
+    public ResponseEntity<String> deactivateStation(@PathVariable Integer id) {
+        stationService.deactivateStation(id);
+        return ResponseEntity.ok("Station with ID " + id + " has been deactivated.");
+    }
+    
+    @PatchMapping("/stations/{id}/activate")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "Activate a station (Admin only)", description = "Marks an inactive metro station as active, allowing it to be used in new ticket bookings.")
+    @SecurityRequirement(name = "bearerAuth")
+    public ResponseEntity<String> activateStation(@PathVariable Integer id) {
+        stationService.activateStation(id);
+        return ResponseEntity.ok("Station with ID " + id + " has been activated.");
     }
 }

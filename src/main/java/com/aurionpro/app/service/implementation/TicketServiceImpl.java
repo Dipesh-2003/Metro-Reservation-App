@@ -72,8 +72,17 @@ public class TicketServiceImpl implements TicketService {
 
         Station origin = stationRepository.findById(originId)
                 .orElseThrow(() -> new ResourceNotFoundException("Origin station not found"));
+        
+        if (!origin.getActive()) {
+            throw new InvalidOperationException("The origin station '" + origin.getName() + "' is currently not operational.");
+        }
+
         Station destination = stationRepository.findById(destId)
                 .orElseThrow(() -> new ResourceNotFoundException("Destination station not found"));
+
+        if (!destination.getActive()) {
+            throw new InvalidOperationException("The destination station '" + destination.getName() + "' is currently not operational.");
+        }
 
         int stationCount = Math.abs(origin.getStationOrder() - destination.getStationOrder());
 
@@ -81,14 +90,7 @@ public class TicketServiceImpl implements TicketService {
                 .orElseThrow(() -> new ResourceNotFoundException("Fare slab not found for the selected route"));
 
         BigDecimal oneWayFare = fareSlab.getFare();
-        BigDecimal finalFare;
-
-        if (ticketType == TicketType.RETURN) {
-            finalFare = oneWayFare.multiply(new BigDecimal("2"));
-        } else {
-            // Default to one-way fare for ONE_WAY or if ticketType is null
-            finalFare = oneWayFare;
-        }
+        BigDecimal finalFare = (ticketType == TicketType.RETURN) ? oneWayFare.multiply(new BigDecimal("2")) : oneWayFare;
 
         return new FareResponse(finalFare);
     }
@@ -157,8 +159,19 @@ public class TicketServiceImpl implements TicketService {
     public TicketDto createTicketForConfirmedPayment(BookingRequest bookingRequest, User user, Payment payment) {
         Station origin = stationRepository.findById(bookingRequest.getOriginStationId())
                 .orElseThrow(() -> new ResourceNotFoundException("Origin station not found"));
+
+        // Check if the origin station is active
+        if (!origin.getActive()) {
+            throw new InvalidOperationException("The origin station '" + origin.getName() + "' is currently not operational.");
+        }
+
         Station destination = stationRepository.findById(bookingRequest.getDestinationStationId())
                 .orElseThrow(() -> new ResourceNotFoundException("Destination station not found"));
+
+        // Check if the destination station is active
+        if (!destination.getActive()) {
+            throw new InvalidOperationException("The destination station '" + destination.getName() + "' is currently not operational.");
+        }
         
         Ticket ticket = new Ticket();
         ticket.setUser(user);
@@ -173,8 +186,8 @@ public class TicketServiceImpl implements TicketService {
 
         if (bookingRequest.getTicketType() == TicketType.DAY_PASS) {
             Instant endOfDay = LocalDate.now(ZoneId.systemDefault()).plusDays(1)
-                                      .atStartOfDay(ZoneId.systemDefault())
-                                      .toInstant().minusSeconds(1);
+                                    .atStartOfDay(ZoneId.systemDefault())
+                                    .toInstant().minusSeconds(1);
             ticket.setExpiryTime(endOfDay);
         } else {
             ticket.setExpiryTime(Instant.now().plus(24, ChronoUnit.HOURS));
