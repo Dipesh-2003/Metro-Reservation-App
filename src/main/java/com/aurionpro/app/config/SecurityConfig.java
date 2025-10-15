@@ -1,5 +1,3 @@
-// In: src/main/java/com/aurionpro/app/config/SecurityConfig.java
-
 package com.aurionpro.app.config;
 
 import com.aurionpro.app.security.JwtAuthFilter;
@@ -33,27 +31,21 @@ public class SecurityConfig {
 	@Bean
 	public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
 		http.csrf(csrf -> csrf.disable()).authorizeHttpRequests(req -> req
-				// THIS IS THE CRITICAL LINE
-				// It makes all endpoints under /auth/... public
 				.requestMatchers("/api/v1/auth/**").permitAll()
-
-				// Also permit swagger documentation paths
 				.requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
-
 				.requestMatchers("/api/v1/payments/webhook/**").permitAll()
-				// Permit the public fare calculation endpoint
 				.requestMatchers(HttpMethod.GET, "/api/v1/tickets/fare").permitAll()
 
-				// Any other request that doesn't match the rules above must be authenticated
+                .requestMatchers(HttpMethod.GET, "/api/v1/stations").permitAll()
+
 				.anyRequest().authenticated())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authenticationProvider(authenticationProvider())
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
-
 	}
-
+        
 	@Bean
 	public AuthenticationProvider authenticationProvider() {
 		DaoAuthenticationProvider authProvider = new DaoAuthenticationProvider();

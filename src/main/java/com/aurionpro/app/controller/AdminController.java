@@ -30,6 +30,15 @@ public class AdminController {
     private final StationService stationService;
     private final TicketRepository ticketRepository;
 
+    
+    @GetMapping("/stations/all")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "Get all stations, including inactive ones (Admin only)", description = "Retrieves a complete list of all metro stations in the system.")
+    @SecurityRequirement(name = "bearerAuth")
+    public ResponseEntity<List<StationDto>> getAllStationsForAdmin() {
+        return ResponseEntity.ok(stationService.getAllStationsForAdmin());
+    }
+    
     @PostMapping("/stations")
     @PreAuthorize("hasRole('ADMIN')")
     @Operation(summary = "Add a new station (Admin only)", description = "Creates a new metro station in the system.")

@@ -8,4 +8,5 @@ public class StationDto {
     private String name;
     private String code;
     private Integer stationOrder;
+    private Boolean active;
 }

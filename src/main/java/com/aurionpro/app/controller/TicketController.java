@@ -34,7 +34,7 @@ public class TicketController {
     public ResponseEntity<FareResponse> getFare(
             @RequestParam Integer originId, 
             @RequestParam Integer destId,
-            @RequestParam(required = false) TicketType ticketType) {
+            @RequestParam(name="type",required = false) TicketType ticketType) {
         return ResponseEntity.ok(ticketService.calculateFare(originId, destId, ticketType));
     }
 

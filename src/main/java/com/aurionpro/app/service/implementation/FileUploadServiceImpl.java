@@ -21,9 +21,9 @@ public class FileUploadServiceImpl implements FileUploadService {
 
     private final Cloudinary cloudinary;
     
-    //  allowed file types
+    //allowed file types
     private static final List<String> ALLOWED_IMAGE_TYPES = Arrays.asList("image/jpeg", "image/png");
-    //  max file size (2MB) 
+    //max file size (2MB) 
     private static final long MAX_FILE_SIZE = 2 * 1024 * 1024;
 
 

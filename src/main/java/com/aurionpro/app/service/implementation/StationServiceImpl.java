@@ -58,6 +58,11 @@ public class StationServiceImpl implements StationService {
         List<Station> stations = stationRepository.findAllByActiveTrue();
         return stationMapper.entityToDto(stations);
     }
+    
+    public List<StationDto> getAllStationsForAdmin() {
+        List<Station> stations = stationRepository.findAll();
+        return stationMapper.entityToDto(stations);
+    }
 
 
     @Override
