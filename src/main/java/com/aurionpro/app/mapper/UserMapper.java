@@ -13,12 +13,11 @@ import java.util.List;
 @Mapper(componentModel = "spring")
 public interface UserMapper {
 
+    // This is the mapping we need for the profile
     UserDto entityToDto(User user);
     
-   
+    // These are for the wallet functionality
     WalletDto entityToDto(Wallet wallet);
-
     WalletTransactionDto entityToDto(WalletTransaction transaction);
-    
     List<WalletTransactionDto> entityToDto(List<WalletTransaction> transactions);
 }
