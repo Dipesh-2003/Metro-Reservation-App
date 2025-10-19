@@ -1,5 +1,11 @@
 package com.aurionpro.app.service.implementation;
 
+import java.util.List;
+import java.util.stream.Collectors;
+
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 import com.aurionpro.app.dto.CreateFareSlabRequest;
 import com.aurionpro.app.dto.CreateStationRequest;
 import com.aurionpro.app.dto.FareSlabDto;
@@ -12,10 +18,8 @@ import com.aurionpro.app.mapper.StationMapper;
 import com.aurionpro.app.repository.FareSlabRepository;
 import com.aurionpro.app.repository.StationRepository;
 import com.aurionpro.app.service.StationService;
+
 import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Service;
-import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -100,5 +104,34 @@ public class StationServiceImpl implements StationService {
                 .orElseThrow(() -> new ResourceNotFoundException("Station not found with ID: " + id));
         station.setActive(true);
         stationRepository.save(station);
+    }
+
+    @Override
+    public List<FareSlabDto> getAllFareSlabs() {
+        return fareSlabRepository.findAll().stream()
+                .map(fareSlabMapper::entityToDto)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional
+    public FareSlabDto updateFareSlab(Integer slabId, CreateFareSlabRequest request) {
+        FareSlab slab = fareSlabRepository.findById(slabId)
+                .orElseThrow(() -> new ResourceNotFoundException("FareSlab not found with ID: " + slabId));
+
+        slab.setMinStations(request.getMinStations());
+        slab.setMaxStations(request.getMaxStations());
+        slab.setFare(request.getFare());
+
+        FareSlab updatedSlab = fareSlabRepository.save(slab);
+        return fareSlabMapper.entityToDto(updatedSlab);
+    }
+
+    @Override
+    public void deleteFareSlab(Integer slabId) {
+        if (!fareSlabRepository.existsById(slabId)) {
+            throw new ResourceNotFoundException("FareSlab not found with ID: " + slabId);
+        }
+        fareSlabRepository.deleteById(slabId);
     }
 }

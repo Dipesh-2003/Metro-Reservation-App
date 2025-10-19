@@ -59,11 +59,35 @@ public class AdminController {
 
     @PostMapping("/fares/slabs")
     @PreAuthorize("hasRole('ADMIN')")
-    @Operation(summary = "Add a new fare slab (Admin only)", description = "Creates a fare slab based on the number of stations.")
+    @Operation(summary = "Add a new fare slab (Admin only)")
     @SecurityRequirement(name = "bearerAuth")
     public ResponseEntity<FareSlabDto> addFareSlab(@RequestBody CreateFareSlabRequest fareSlabRequest) {
         FareSlabDto newFareSlab = stationService.addFareSlab(fareSlabRequest);
         return new ResponseEntity<>(newFareSlab, HttpStatus.CREATED);
+    }
+    
+    @GetMapping("/fares/slabs")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "Get all fare slabs (Admin only)")
+    @SecurityRequirement(name = "bearerAuth")
+    public ResponseEntity<List<FareSlabDto>> getAllFareSlabs() {
+        return ResponseEntity.ok(stationService.getAllFareSlabs());
+    }
+    @PutMapping("/fares/slabs/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "Update a fare slab (Admin only)")
+    @SecurityRequirement(name = "bearerAuth")
+    public ResponseEntity<FareSlabDto> updateFareSlab(@PathVariable Integer id, @RequestBody CreateFareSlabRequest request) {
+        return ResponseEntity.ok(stationService.updateFareSlab(id, request));
+    }
+    
+    @DeleteMapping("/fares/slabs/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "Delete a fare slab (Admin only)")
+    @SecurityRequirement(name = "bearerAuth")
+    public ResponseEntity<Void> deleteFareSlab(@PathVariable Integer id) {
+        stationService.deleteFareSlab(id);
+        return ResponseEntity.noContent().build();
     }
 
     @PutMapping("/stations/{id}")
