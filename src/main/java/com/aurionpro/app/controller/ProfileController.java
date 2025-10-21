@@ -33,7 +33,7 @@ public class ProfileController {
 
     private final FileUploadService fileUploadService;
     private final UserService userService;
-    private final UserMapper userMapper; // <-- Add this dependency
+    private final UserMapper userMapper;
 
     @GetMapping("/me")
     @Operation(summary = "Get the current authenticated user's profile")
