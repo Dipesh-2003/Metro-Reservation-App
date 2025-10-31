@@ -21,4 +21,5 @@ public class TicketDto {
     private TicketStatus status;
     private TicketType ticketType;
     private String qrCodePayload;
+    private String qrCodeImage;
 }
